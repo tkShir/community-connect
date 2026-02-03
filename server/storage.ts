@@ -101,15 +101,25 @@ export class DatabaseStorage implements IStorage {
     const excludedProfileIds = new Set<number>([profileId]);
     existingInteractions.forEach(m => { excludedProfileIds.add(m.initiatorId); excludedProfileIds.add(m.receiverId); });
 
-    // Suggest based on industry and complementary goals (mentor/mentee)
-    const potential = await db.select().from(profiles).where(and(
-      notInArray(profiles.id, Array.from(excludedProfileIds)),
-      eq(profiles.profession, myProfile.profession)
-    ));
-
-    return potential.filter(p => {
-      if (myProfile.goal === 'mentor') return p.goal === 'mentee';
-      if (myProfile.goal === 'mentee') return p.goal === 'mentor';
+    const allProfiles = await db.select().from(profiles).where(notInArray(profiles.id, Array.from(excludedProfileIds)));
+    
+    const myProfessions = Array.isArray(myProfile.profession) ? myProfile.profession : [myProfile.profession];
+    const myGoals = Array.isArray(myProfile.goal) ? myProfile.goal : [myProfile.goal];
+    
+    return allProfiles.filter(p => {
+      const pProfessions = Array.isArray(p.profession) ? p.profession : [p.profession];
+      const pGoals = Array.isArray(p.goal) ? p.goal : [p.goal];
+      
+      const hasCommonProfession = myProfessions.some(mp => pProfessions.includes(mp));
+      if (!hasCommonProfession) return false;
+      
+      const iWantMentor = myGoals.some(g => g.toLowerCase().includes('mentor') && !g.toLowerCase().includes('mentee'));
+      const iWantMentee = myGoals.some(g => g.toLowerCase().includes('mentee'));
+      const theyWantMentor = pGoals.some(g => g.toLowerCase().includes('mentor') && !g.toLowerCase().includes('mentee'));
+      const theyWantMentee = pGoals.some(g => g.toLowerCase().includes('mentee'));
+      
+      if (iWantMentor && theyWantMentee) return true;
+      if (iWantMentee && theyWantMentor) return true;
       return false;
     });
   }

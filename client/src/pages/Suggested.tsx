@@ -49,7 +49,7 @@ export default function Suggested() {
       <header>
         <h1 className="text-4xl font-display font-bold text-foreground">Suggested Connections</h1>
         <p className="text-muted-foreground mt-2">
-          People in your industry looking for {profiles[0]?.goal === "mentor" ? "mentees" : "mentors"}.
+          People in your industry with complementary goals.
         </p>
       </header>
 
@@ -74,15 +74,19 @@ export default function Suggested() {
                           <h3 className="text-xl font-bold">{profile.alias}</h3>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <Briefcase className="w-4 h-4" />
-                            {profile.profession}
+                            {Array.isArray(profile.profession) ? profile.profession.join(", ") : profile.profession}
                             <span className="text-xs">•</span>
                             <span>{profile.ageRange}</span>
                           </div>
                         </div>
-                        <Badge className="bg-primary/20 text-primary border-primary/30 capitalize">
-                          <Star className="w-3 h-3 mr-1" />
-                          {profile.goal === "mentor" ? "Mentor" : "Mentee"}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {(Array.isArray(profile.goal) ? profile.goal : [profile.goal]).slice(0, 2).map((g: string) => (
+                            <Badge key={g} className="bg-primary/20 text-primary border-primary/30 capitalize text-xs">
+                              <Star className="w-3 h-3 mr-1" />
+                              {g?.replace("_", " ")}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
                       <p className="text-muted-foreground text-sm leading-relaxed mt-3">
                         {profile.bio}

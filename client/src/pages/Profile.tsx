@@ -55,12 +55,18 @@ export default function Profile() {
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-3xl font-bold text-foreground">{profile.alias}</h2>
-              <p className="text-lg text-primary mt-1">{profile.profession}</p>
+              <p className="text-lg text-primary mt-1">
+                {Array.isArray(profile.profession) ? profile.profession.join(", ") : profile.profession}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">{profile.ageRange}</p>
             </div>
-            <Badge className="bg-primary text-primary-foreground px-4 py-1.5 text-sm uppercase tracking-wide">
-              {profile.goal?.replace("_", " ")}
-            </Badge>
+            <div className="flex flex-wrap gap-2 justify-end">
+              {(Array.isArray(profile.goal) ? profile.goal : [profile.goal]).map((g: string) => (
+                <Badge key={g} className="bg-primary text-primary-foreground px-3 py-1 text-xs uppercase tracking-wide">
+                  {g?.replace("_", " ")}
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardHeader>
 

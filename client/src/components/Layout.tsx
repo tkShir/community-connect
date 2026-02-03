@@ -127,18 +127,20 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="pt-6 border-t border-border">
-          <div className="flex items-center gap-3 px-2 mb-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-primary/50 flex items-center justify-center text-primary-foreground font-bold">
-              {profile?.alias?.substring(0, 2).toUpperCase() ||
-                user.email?.substring(0, 2).toUpperCase()}
+          <Link href="/profile">
+            <div className="flex items-center gap-3 px-2 mb-4 cursor-pointer hover:bg-white/5 rounded-lg py-2 transition-colors" data-testid="link-profile-sidebar">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-primary/50 flex items-center justify-center text-primary-foreground font-bold">
+                {profile?.alias?.substring(0, 2).toUpperCase() ||
+                  user.email?.substring(0, 2).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-semibold truncate">{profile?.alias || "Member"}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {Array.isArray(profile?.profession) ? profile.profession.join(", ") : profile?.profession || "Set up profile"}
+                </p>
+              </div>
             </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold truncate">{profile?.alias || "Member"}</p>
-              <p className="text-xs text-muted-foreground truncate">
-                {profile?.profession || "Set up profile"}
-              </p>
-            </div>
-          </div>
+          </Link>
           <Button
             variant="ghost"
             className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"

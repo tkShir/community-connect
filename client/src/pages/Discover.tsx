@@ -70,12 +70,16 @@ export default function Discover() {
                       <h3 className="text-xl font-bold text-foreground">{profile.alias}</h3>
                       <div className="flex items-center text-sm text-muted-foreground mt-1">
                         <Briefcase className="w-3.5 h-3.5 mr-2" />
-                        {profile.profession}
+                        {Array.isArray(profile.profession) ? profile.profession.join(", ") : profile.profession}
                       </div>
                     </div>
-                    <Badge variant="outline" className="border-primary/30 text-primary capitalize">
-                      {profile.goal.replace('_', ' ')}
-                    </Badge>
+                    <div className="flex flex-wrap gap-1 justify-end">
+                      {(Array.isArray(profile.goal) ? profile.goal.slice(0, 2) : [profile.goal]).map((g: string) => (
+                        <Badge key={g} variant="outline" className="border-primary/30 text-primary capitalize text-xs">
+                          {g?.replace('_', ' ')}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </CardHeader>
 

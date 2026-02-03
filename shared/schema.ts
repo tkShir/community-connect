@@ -10,16 +10,16 @@ export * from "./models/auth";
 
 export const profiles = pgTable("profiles", {
   id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id).unique(), // Link to Replit Auth user
-  alias: text("alias").notNull(), // Anonymous name
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  alias: text("alias").notNull(),
   bio: text("bio").notNull(),
-  profession: text("profession").notNull(),
+  profession: text("profession").array().notNull(),
   hobbies: text("hobbies").array().notNull(),
   interests: text("interests").array().notNull(),
-  goal: text("goal").notNull(), // e.g., "mentor", "mentee", "friend", "soccer"
+  goal: text("goal").array().notNull(),
   isPublic: boolean("is_public").default(true).notNull(),
-  ageRange: text("age_range").notNull(), // below 18, 18-22, 23-26, 27-30, 30-34, above 34
-  contactMethod: text("contact_method").notNull(), // phone, email, LINE
+  ageRange: text("age_range").notNull(),
+  contactMethod: text("contact_method").notNull(),
   contactValue: text("contact_value").notNull(),
 });
 

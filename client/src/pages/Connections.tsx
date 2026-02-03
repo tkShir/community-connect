@@ -61,10 +61,16 @@ export default function Connections() {
                   </div>
                   <div>
                     <h3 className="font-bold">{match.partnerProfile.alias}</h3>
-                    <p className="text-sm text-muted-foreground">{match.partnerProfile.profession}</p>
-                    <Badge variant="outline" className="mt-1 text-xs capitalize">
-                      {match.partnerProfile.goal?.replace("_", " ")}
-                    </Badge>
+                    <p className="text-sm text-muted-foreground">
+                      {Array.isArray(match.partnerProfile.profession) ? match.partnerProfile.profession.join(", ") : match.partnerProfile.profession}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {(Array.isArray(match.partnerProfile.goal) ? match.partnerProfile.goal : [match.partnerProfile.goal]).slice(0, 2).map((g: string) => (
+                        <Badge key={g} variant="outline" className="text-xs capitalize">
+                          {g?.replace("_", " ")}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -105,7 +111,9 @@ export default function Connections() {
                 </div>
                 <div className="flex-1">
                   <h3 className="font-bold">{match.partnerProfile.alias}</h3>
-                  <p className="text-sm text-muted-foreground">{match.partnerProfile.profession}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {Array.isArray(match.partnerProfile.profession) ? match.partnerProfile.profession.join(", ") : match.partnerProfile.profession}
+                  </p>
                 </div>
                 <Badge variant="secondary" className="text-xs">Waiting for response</Badge>
               </CardContent>
@@ -138,7 +146,9 @@ export default function Connections() {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold">{match.partnerProfile.alias}</h3>
-                      <p className="text-sm text-muted-foreground">{match.partnerProfile.profession}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {Array.isArray(match.partnerProfile.profession) ? match.partnerProfile.profession.join(", ") : match.partnerProfile.profession}
+                      </p>
                       <p className="text-sm text-muted-foreground mt-1">
                         {match.partnerProfile.ageRange}
                       </p>

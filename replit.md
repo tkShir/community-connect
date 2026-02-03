@@ -26,7 +26,8 @@ An exclusive community matching application for professionals (ages 18-35) where
 - `/profile` - View/edit your profile
 
 ## Database Schema
-- `profiles`: User profiles with alias, bio, profession, interests, hobbies, goal, ageRange, contactMethod, contactValue
+- `profiles`: User profiles with alias, bio, profession (text[]), interests (text[]), hobbies (text[]), goal (text[]), ageRange, contactMethod, contactValue
+  - profession and goal are text arrays to support multi-select
 - `matches`: Connection requests between profiles (pending/accepted/rejected)
 - `notifications`: Notifications for connection activity
 
@@ -36,7 +37,15 @@ An exclusive community matching application for professionals (ages 18-35) where
 
 ## User Preferences
 - No flashy landing page - simple login only
-- Profession/interests/hobbies use dropdown with 10 preselected items + custom input
+- Profession/industry and goals support multi-select with dropdown suggestions + custom input
+- All multi-select fields (profession, goal, interests, hobbies) require at least 1 selection
 - No messaging feature - just share contact info after match acceptance
 - Age ranges: below 18, 18-22, 23-26, 27-30, 30-34, above 34
 - Contact methods: Phone, Email, LINE
+
+## Recent Updates (Feb 2026)
+- Changed profession and goal fields from text to text[] (arrays) to support multi-select
+- Edit Profile button now works - links to /onboarding where existing data loads
+- Member section in sidebar is clickable and links to profile page
+- All pages (Discover, Suggested, Connections, Profile) updated to display arrays
+- Suggested matches logic updated to handle array-based profession and goal comparisons

@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
+import { z } from "zod";
 
 const PROFESSIONS = [
   "Technology",
@@ -25,6 +26,14 @@ const PROFESSIONS = [
   "Law",
   "Marketing",
   "Real Estate",
+];
+
+const GOALS = [
+  { value: "mentor", label: "Find a Mentor" },
+  { value: "mentee", label: "Find a Mentee" },
+  { value: "networking", label: "Professional Networking" },
+  { value: "friendship", label: "Friendship / Social" },
+  { value: "activity_partner", label: "Activity Partner" },
 ];
 
 const INTERESTS = [
@@ -64,21 +73,30 @@ const AGE_RANGES = [
 
 const CONTACT_METHODS = ["Phone", "Email", "LINE"];
 
+const formSchema = insertProfileSchema.extend({
+  profession: z.array(z.string()).min(1, "Select at least one profession"),
+  goal: z.array(z.string()).min(1, "Select at least one goal"),
+  interests: z.array(z.string()).min(1, "Select at least one interest"),
+  hobbies: z.array(z.string()).min(1, "Select at least one hobby"),
+});
+
+type FormData = z.infer<typeof formSchema>;
+
 export default function Onboarding() {
   const { user } = useAuth();
   const { data: existingProfile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
   const [, setLocation] = useLocation();
 
-  const form = useForm<InsertProfile>({
-    resolver: zodResolver(insertProfileSchema),
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       alias: "",
       bio: "",
-      profession: "",
+      profession: [],
       hobbies: [],
       interests: [],
-      goal: "",
+      goal: [],
       isPublic: true,
       ageRange: "",
       contactMethod: "",
@@ -91,10 +109,10 @@ export default function Onboarding() {
       form.reset({
         alias: existingProfile.alias,
         bio: existingProfile.bio,
-        profession: existingProfile.profession,
+        profession: Array.isArray(existingProfile.profession) ? existingProfile.profession : [existingProfile.profession],
         hobbies: existingProfile.hobbies,
         interests: existingProfile.interests,
-        goal: existingProfile.goal,
+        goal: Array.isArray(existingProfile.goal) ? existingProfile.goal : [existingProfile.goal],
         isPublic: existingProfile.isPublic,
         ageRange: existingProfile.ageRange,
         contactMethod: existingProfile.contactMethod,
@@ -103,10 +121,12 @@ export default function Onboarding() {
     }
   }, [existingProfile, form]);
 
-  const onSubmit = (data: InsertProfile) => {
-    mutate(data, {
+  const onSubmit = (data: FormData) => {
+    mutate(data as InsertProfile, {
       onSuccess: () => {
-        setLocation("/discover");
+        setTimeout(() => {
+          setLocation("/discover");
+        }, 100);
       },
     });
   };
@@ -179,14 +199,13 @@ export default function Onboarding() {
                 name="profession"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Profession / Industry</FormLabel>
+                    <FormLabel>Profession / Industry (select at least 1)</FormLabel>
                     <FormControl>
                       <TagInput
-                        value={field.value ? [field.value] : []}
-                        onChange={(vals) => field.onChange(vals[vals.length - 1] || "")}
+                        value={field.value || []}
+                        onChange={field.onChange}
                         suggestions={PROFESSIONS}
-                        placeholder="Select or type your profession"
-                        maxTags={1}
+                        placeholder="Select or type professions"
                         data-testid="input-profession"
                       />
                     </FormControl>
@@ -200,21 +219,16 @@ export default function Onboarding() {
                 name="goal"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>What are you looking for?</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="bg-background border-white/10" data-testid="select-goal">
-                          <SelectValue placeholder="Select a primary goal" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="mentor">I want to find a Mentor</SelectItem>
-                        <SelectItem value="mentee">I want to find a Mentee</SelectItem>
-                        <SelectItem value="networking">Professional Networking</SelectItem>
-                        <SelectItem value="friendship">Friendship / Social</SelectItem>
-                        <SelectItem value="activity_partner">Activity Partner (e.g. Sports)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormLabel>What are you looking for? (select at least 1)</FormLabel>
+                    <FormControl>
+                      <TagInput
+                        value={field.value || []}
+                        onChange={field.onChange}
+                        suggestions={GOALS.map(g => g.label)}
+                        placeholder="Select or type your goals"
+                        data-testid="input-goal"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -245,7 +259,7 @@ export default function Onboarding() {
                   name="interests"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Professional Interests</FormLabel>
+                      <FormLabel>Professional Interests (select at least 1)</FormLabel>
                       <FormControl>
                         <TagInput
                           value={field.value || []}
@@ -265,7 +279,7 @@ export default function Onboarding() {
                   name="hobbies"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Hobbies & Passions</FormLabel>
+                      <FormLabel>Hobbies & Passions (select at least 1)</FormLabel>
                       <FormControl>
                         <TagInput
                           value={field.value || []}

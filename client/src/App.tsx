@@ -43,11 +43,6 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
     return null;
   }
 
-  if (profile && window.location.pathname === "/onboarding") {
-    setTimeout(() => setLocation("/discover"), 0);
-    return null;
-  }
-
   return (
     <Layout>
       <Component />
