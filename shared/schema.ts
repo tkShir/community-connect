@@ -21,6 +21,7 @@ export const profiles = pgTable("profiles", {
   ageRange: text("age_range").notNull(),
   contactMethod: text("contact_method").notNull(),
   contactValue: text("contact_value").notNull(),
+  isAdmin: boolean("is_admin").default(false).notNull(),
 });
 
 export const matches = pgTable("matches", {

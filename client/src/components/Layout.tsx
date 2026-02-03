@@ -11,6 +11,7 @@ import {
   Compass,
   Bell,
   Lightbulb,
+  Shield,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -40,6 +41,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/suggested", label: "Suggested", icon: Lightbulb },
     { href: "/connections", label: "Connections", icon: Users },
     { href: "/profile", label: "My Profile", icon: UserCircle },
+    ...(profile?.isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
   ];
 
   return (

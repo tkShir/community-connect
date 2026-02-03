@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth";
-import { api } from "@shared/routes";
+import { api, adminProfileUpdateSchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
@@ -169,6 +169,45 @@ export async function registerRoutes(
     if (!req.isAuthenticated()) return res.sendStatus(401);
     await storage.markNotificationRead(Number(req.params.id));
     res.json({ success: true });
+  });
+
+  // === Admin Routes ===
+  
+  app.get("/api/admin/profiles", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    const allProfiles = await storage.getAllProfilesAdmin();
+    res.json(allProfiles);
+  });
+
+  app.patch("/api/admin/profiles/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const profileId = Number(req.params.id);
+      const validatedData = adminProfileUpdateSchema.parse(req.body);
+      const updated = await storage.updateProfileAdmin(profileId, validatedData);
+      if (!updated) return res.status(404).json({ message: "Profile not found" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
   });
 
   // Seed data

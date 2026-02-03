@@ -13,6 +13,8 @@ export interface IStorage {
   getProfileByUserId(userId: string): Promise<Profile | undefined>;
   upsertProfile(userId: string, profile: InsertProfile): Promise<Profile>;
   getAllProfiles(excludeUserId: string): Promise<Profile[]>;
+  getAllProfilesAdmin(): Promise<Profile[]>;
+  updateProfileAdmin(id: number, profile: Partial<InsertProfile> & { isAdmin?: boolean }): Promise<Profile | undefined>;
 
   // Matches
   createMatch(match: InsertMatch): Promise<Match>;
@@ -87,11 +89,34 @@ export class DatabaseStorage implements IStorage {
     const excludedProfileIds = new Set<number>([profileId]);
     existingInteractions.forEach(m => { excludedProfileIds.add(m.initiatorId); excludedProfileIds.add(m.receiverId); });
     const potential = await db.select().from(profiles).where(notInArray(profiles.id, Array.from(excludedProfileIds)));
-    return potential.sort((a, b) => {
-      const aCommon = a.interests.filter(i => myProfile.interests.includes(i)).length;
-      const bCommon = b.interests.filter(i => myProfile.interests.includes(i)).length;
-      return bCommon - aCommon;
-    });
+    
+    const myGoals = Array.isArray(myProfile.goal) ? myProfile.goal : [myProfile.goal];
+    
+    return potential.map(p => {
+      let score = 0;
+      
+      if (myGoals.some(g => g.toLowerCase().includes('networking'))) {
+        const professionMatch = p.profession.filter(prof => myProfile.profession.includes(prof)).length;
+        const interestMatch = p.interests.filter(i => myProfile.interests.includes(i)).length;
+        score += (professionMatch * 3) + (interestMatch * 2);
+      }
+      
+      if (myGoals.some(g => g.toLowerCase().includes('friendship') || g.toLowerCase().includes('social'))) {
+        const hobbyMatch = p.hobbies.filter(h => myProfile.hobbies.includes(h)).length;
+        const sameAge = p.ageRange === myProfile.ageRange ? 1 : 0;
+        score += (hobbyMatch * 2) + (sameAge * 3);
+      }
+      
+      if (myGoals.some(g => g.toLowerCase().includes('activity') || g.toLowerCase().includes('partner'))) {
+        const hobbyMatch = p.hobbies.filter(h => myProfile.hobbies.includes(h)).length;
+        score += hobbyMatch * 3;
+      }
+      
+      const interestMatch = p.interests.filter(i => myProfile.interests.includes(i)).length;
+      score += interestMatch;
+      
+      return { profile: p, score };
+    }).sort((a, b) => b.score - a.score).map(item => item.profile);
   }
 
   async getSuggestedMatches(profileId: number): Promise<Profile[]> {
@@ -135,6 +160,15 @@ export class DatabaseStorage implements IStorage {
 
   async markNotificationRead(id: number): Promise<void> {
     await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
+  }
+
+  async getAllProfilesAdmin(): Promise<Profile[]> {
+    return await db.select().from(profiles);
+  }
+
+  async updateProfileAdmin(id: number, profileUpdate: Partial<InsertProfile> & { isAdmin?: boolean }): Promise<Profile | undefined> {
+    const [updated] = await db.update(profiles).set(profileUpdate).where(eq(profiles.id, id)).returning();
+    return updated;
   }
 }
 

@@ -74,6 +74,7 @@ const AGE_RANGES = [
 const CONTACT_METHODS = ["Phone", "Email", "LINE"];
 
 const formSchema = insertProfileSchema.extend({
+  alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
   profession: z.array(z.string()).min(1, "Select at least one profession"),
   goal: z.array(z.string()).min(1, "Select at least one goal"),
   interests: z.array(z.string()).min(1, "Select at least one interest"),

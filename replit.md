@@ -48,4 +48,9 @@ An exclusive community matching application for professionals (ages 18-35) where
 - Edit Profile button now works - links to /onboarding where existing data loads
 - Member section in sidebar is clickable and links to profile page
 - All pages (Discover, Suggested, Connections, Profile) updated to display arrays
-- Suggested matches logic updated to handle array-based profession and goal comparisons
+- Suggested matches logic: Mentor seekers match with Mentee seekers (complementary matching)
+- Discover page matching: Goal-based scoring (Professional Networking → profession/interests, Friendship/Social → age/hobbies, Activity Partner → hobbies)
+- Added isAdmin field to profiles for admin users
+- Created Admin page (/admin) for managing all users - only accessible to admins
+- Authentication uses OAuth 2.0 + OpenID Connect via Replit Auth
+- Alias validation: Required field, minimum 2 characters (client and server-side)

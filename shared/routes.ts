@@ -1,6 +1,23 @@
 import { z } from 'zod';
 import { insertProfileSchema, insertMatchSchema, profiles, matches, notifications } from './schema';
 
+export const profileInputSchema = insertProfileSchema.extend({
+  alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
+  profession: z.array(z.string()).min(1, "Select at least one profession"),
+  goal: z.array(z.string()).min(1, "Select at least one goal"),
+  interests: z.array(z.string()).min(1, "Select at least one interest"),
+  hobbies: z.array(z.string()).min(1, "Select at least one hobby"),
+});
+
+export const adminProfileUpdateSchema = z.object({
+  alias: z.string().min(2).optional(),
+  bio: z.string().optional(),
+  ageRange: z.string().optional(),
+  isAdmin: z.boolean().optional(),
+  contactMethod: z.string().optional(),
+  contactValue: z.string().optional(),
+});
+
 // ============================================
 // SHARED ERROR SCHEMAS
 // ============================================
@@ -36,7 +53,7 @@ export const api = {
     upsert: {
       method: 'POST' as const,
       path: '/api/profiles',
-      input: insertProfileSchema,
+      input: profileInputSchema,
       responses: {
         200: z.custom<typeof profiles.$inferSelect>(),
         400: errorSchemas.validation,
