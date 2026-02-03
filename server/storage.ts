@@ -1,13 +1,11 @@
 import { db } from "./db";
 import {
-  profiles, matches, messages,
+  profiles, matches, notifications,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
-  type Message, type InsertMessage,
   type MatchWithProfile
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
-import { authStorage } from "./replit_integrations/auth/storage";
 
 export interface IStorage {
   // Profiles
@@ -21,15 +19,16 @@ export interface IStorage {
   updateMatchStatus(id: number, status: "accepted" | "rejected"): Promise<Match | undefined>;
   getMatchesForProfile(profileId: number): Promise<MatchWithProfile[]>;
   getPotentialMatches(profileId: number): Promise<Profile[]>;
+  getSuggestedMatches(profileId: number): Promise<Profile[]>;
   getMatch(id: number): Promise<Match | undefined>;
 
-  // Messages
-  createMessage(message: InsertMessage): Promise<Message>;
-  getMessages(matchId: number): Promise<Message[]>;
+  // Notifications
+  createNotification(userId: string, content: string): Promise<any>;
+  getNotifications(userId: string): Promise<any[]>;
+  markNotificationRead(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
-  // Profiles
   async getProfile(id: number): Promise<Profile | undefined> {
     const [profile] = await db.select().from(profiles).where(eq(profiles.id, id));
     return profile;
@@ -41,21 +40,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertProfile(userId: string, insertProfile: InsertProfile): Promise<Profile> {
-    // Check if profile exists for this user to update, or insert new
     const existing = await this.getProfileByUserId(userId);
-    
     if (existing) {
-      const [updated] = await db
-        .update(profiles)
-        .set({ ...insertProfile, userId }) // Ensure userId is preserved
-        .where(eq(profiles.id, existing.id))
-        .returning();
+      const [updated] = await db.update(profiles).set({ ...insertProfile, userId }).where(eq(profiles.id, existing.id)).returning();
       return updated;
     } else {
-      const [created] = await db
-        .insert(profiles)
-        .values({ ...insertProfile, userId })
-        .returning();
+      const [created] = await db.insert(profiles).values({ ...insertProfile, userId }).returning();
       return created;
     }
   }
@@ -64,18 +54,13 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(profiles).where(ne(profiles.userId, excludeUserId));
   }
 
-  // Matches
   async createMatch(insertMatch: InsertMatch): Promise<Match> {
     const [match] = await db.insert(matches).values(insertMatch).returning();
     return match;
   }
 
   async updateMatchStatus(id: number, status: "accepted" | "rejected"): Promise<Match | undefined> {
-    const [updated] = await db
-      .update(matches)
-      .set({ status })
-      .where(eq(matches.id, id))
-      .returning();
+    const [updated] = await db.update(matches).set({ status }).where(eq(matches.id, id)).returning();
     return updated;
   }
 
@@ -85,53 +70,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMatchesForProfile(profileId: number): Promise<MatchWithProfile[]> {
-    // Get matches where user is initiator or receiver
-    const allMatches = await db.select().from(matches).where(
-      or(
-        eq(matches.initiatorId, profileId),
-        eq(matches.receiverId, profileId)
-      )
-    );
-
-    // Enrich with partner profile
+    const allMatches = await db.select().from(matches).where(or(eq(matches.initiatorId, profileId), eq(matches.receiverId, profileId)));
     const enrichedMatches: MatchWithProfile[] = [];
     for (const match of allMatches) {
       const partnerId = match.initiatorId === profileId ? match.receiverId : match.initiatorId;
       const partnerProfile = await this.getProfile(partnerId);
-      if (partnerProfile) {
-        enrichedMatches.push({ ...match, partnerProfile });
-      }
+      if (partnerProfile) enrichedMatches.push({ ...match, partnerProfile });
     }
-
     return enrichedMatches;
   }
 
   async getPotentialMatches(profileId: number): Promise<Profile[]> {
     const myProfile = await this.getProfile(profileId);
     if (!myProfile) return [];
-
-    // Get IDs of profiles already interacted with (initiated matches or received matches)
-    const existingInteractions = await db.select().from(matches).where(
-      or(
-        eq(matches.initiatorId, profileId),
-        eq(matches.receiverId, profileId)
-      )
-    );
-
-    const excludedProfileIds = new Set<number>();
-    excludedProfileIds.add(profileId); // Exclude self
-    existingInteractions.forEach(m => {
-      excludedProfileIds.add(m.initiatorId);
-      excludedProfileIds.add(m.receiverId);
-    });
-
-    // Simple recommendation: Get all profiles not in excluded list
-    // In a real app, we'd filter by interests overlap here or in query
-    const potential = await db.select().from(profiles).where(
-        notInArray(profiles.id, Array.from(excludedProfileIds))
-    );
-    
-    // Sort by number of common interests/hobbies (simple js sort for MVP)
+    const existingInteractions = await db.select().from(matches).where(or(eq(matches.initiatorId, profileId), eq(matches.receiverId, profileId)));
+    const excludedProfileIds = new Set<number>([profileId]);
+    existingInteractions.forEach(m => { excludedProfileIds.add(m.initiatorId); excludedProfileIds.add(m.receiverId); });
+    const potential = await db.select().from(profiles).where(notInArray(profiles.id, Array.from(excludedProfileIds)));
     return potential.sort((a, b) => {
       const aCommon = a.interests.filter(i => myProfile.interests.includes(i)).length;
       const bCommon = b.interests.filter(i => myProfile.interests.includes(i)).length;
@@ -139,16 +94,37 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
-  // Messages
-  async createMessage(insertMessage: InsertMessage): Promise<Message> {
-    const [message] = await db.insert(messages).values(insertMessage).returning();
-    return message;
+  async getSuggestedMatches(profileId: number): Promise<Profile[]> {
+    const myProfile = await this.getProfile(profileId);
+    if (!myProfile) return [];
+    const existingInteractions = await db.select().from(matches).where(or(eq(matches.initiatorId, profileId), eq(matches.receiverId, profileId)));
+    const excludedProfileIds = new Set<number>([profileId]);
+    existingInteractions.forEach(m => { excludedProfileIds.add(m.initiatorId); excludedProfileIds.add(m.receiverId); });
+
+    // Suggest based on industry and complementary goals (mentor/mentee)
+    const potential = await db.select().from(profiles).where(and(
+      notInArray(profiles.id, Array.from(excludedProfileIds)),
+      eq(profiles.profession, myProfile.profession)
+    ));
+
+    return potential.filter(p => {
+      if (myProfile.goal === 'mentor') return p.goal === 'mentee';
+      if (myProfile.goal === 'mentee') return p.goal === 'mentor';
+      return false;
+    });
   }
 
-  async getMessages(matchId: number): Promise<Message[]> {
-    return await db.select().from(messages)
-      .where(eq(messages.matchId, matchId))
-      .orderBy(messages.createdAt);
+  async createNotification(userId: string, content: string): Promise<any> {
+    const [notif] = await db.insert(notifications).values({ userId, content }).returning();
+    return notif;
+  }
+
+  async getNotifications(userId: string): Promise<any[]> {
+    return await db.select().from(notifications).where(eq(notifications.userId, userId)).orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationRead(id: number): Promise<void> {
+    await db.update(notifications).set({ isRead: true }).where(eq(notifications.id, id));
   }
 }
 

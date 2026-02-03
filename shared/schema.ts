@@ -18,6 +18,9 @@ export const profiles = pgTable("profiles", {
   interests: text("interests").array().notNull(),
   goal: text("goal").notNull(), // e.g., "mentor", "mentee", "friend", "soccer"
   isPublic: boolean("is_public").default(true).notNull(),
+  ageRange: text("age_range").notNull(), // below 18, 18-22, 23-26, 27-30, 30-34, above 34
+  contactMethod: text("contact_method").notNull(), // phone, email, LINE
+  contactValue: text("contact_value").notNull(),
 });
 
 export const matches = pgTable("matches", {
@@ -28,11 +31,11 @@ export const matches = pgTable("matches", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const messages = pgTable("messages", {
+export const notifications = pgTable("notifications", {
   id: serial("id").primaryKey(),
-  matchId: integer("match_id").notNull().references(() => matches.id),
-  senderId: integer("sender_id").notNull().references(() => profiles.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
   content: text("content").notNull(),
+  isRead: boolean("is_read").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -45,10 +48,9 @@ export const profilesRelations = relations(profiles, ({ one, many }) => ({
   }),
   initiatedMatches: many(matches, { relationName: "initiator" }),
   receivedMatches: many(matches, { relationName: "receiver" }),
-  sentMessages: many(messages),
 }));
 
-export const matchesRelations = relations(matches, ({ one, many }) => ({
+export const matchesRelations = relations(matches, ({ one }) => ({
   initiator: one(profiles, {
     fields: [matches.initiatorId],
     references: [profiles.id],
@@ -59,17 +61,12 @@ export const matchesRelations = relations(matches, ({ one, many }) => ({
     references: [profiles.id],
     relationName: "receiver",
   }),
-  messages: many(messages),
 }));
 
-export const messagesRelations = relations(messages, ({ one }) => ({
-  match: one(matches, {
-    fields: [messages.matchId],
-    references: [matches.id],
-  }),
-  sender: one(profiles, {
-    fields: [messages.senderId],
-    references: [profiles.id],
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
   }),
 }));
 
@@ -77,7 +74,7 @@ export const messagesRelations = relations(messages, ({ one }) => ({
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, userId: true });
 export const insertMatchSchema = createInsertSchema(matches).omit({ id: true, createdAt: true, status: true });
-export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
+export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -87,8 +84,7 @@ export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type Match = typeof matches.$inferSelect;
 export type InsertMatch = z.infer<typeof insertMatchSchema>;
 
-export type Message = typeof messages.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Notification = typeof notifications.$inferSelect;
 
 export type MatchWithProfile = Match & {
   partnerProfile: Profile;

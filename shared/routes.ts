@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, insertMatchSchema, insertMessageSchema, profiles, matches, messages } from './schema';
+import { insertProfileSchema, insertMatchSchema, profiles, matches, notifications } from './schema';
 
 // ============================================
 // SHARED ERROR SCHEMAS
@@ -52,21 +52,28 @@ export const api = {
     },
   },
   matches: {
-    potential: { // Recommendations
+    potential: {
       method: 'GET' as const,
       path: '/api/matches/potential',
       responses: {
-        200: z.array(z.custom<typeof profiles.$inferSelect>()), // Returns profiles
+        200: z.array(z.custom<typeof profiles.$inferSelect>()),
       },
     },
-    list: { // My matches
+    suggested: { // New endpoint for suggested connections
+      method: 'GET' as const,
+      path: '/api/matches/suggested',
+      responses: {
+        200: z.array(z.custom<typeof profiles.$inferSelect>()),
+      },
+    },
+    list: {
       method: 'GET' as const,
       path: '/api/matches',
       responses: {
         200: z.array(z.custom<typeof matches.$inferSelect & { partner: typeof profiles.$inferSelect }>()),
       },
     },
-    create: { // Request a match
+    create: {
       method: 'POST' as const,
       path: '/api/matches',
       input: z.object({ receiverId: z.number() }),
@@ -75,7 +82,7 @@ export const api = {
         400: errorSchemas.validation,
       },
     },
-    respond: { // Accept/Reject
+    respond: {
       method: 'PATCH' as const,
       path: '/api/matches/:id',
       input: z.object({ status: z.enum(['accepted', 'rejected']) }),
@@ -85,21 +92,19 @@ export const api = {
       },
     },
   },
-  messages: {
+  notifications: {
     list: {
       method: 'GET' as const,
-      path: '/api/matches/:matchId/messages',
+      path: '/api/notifications',
       responses: {
-        200: z.array(z.custom<typeof messages.$inferSelect>()),
+        200: z.array(z.custom<typeof notifications.$inferSelect>()),
       },
     },
-    create: {
-      method: 'POST' as const,
-      path: '/api/matches/:matchId/messages',
-      input: z.object({ content: z.string() }),
+    markRead: {
+      method: 'PATCH' as const,
+      path: '/api/notifications/:id/read',
       responses: {
-        201: z.custom<typeof messages.$inferSelect>(),
-        400: errorSchemas.validation,
+        200: z.object({ success: z.boolean() }),
       },
     },
   },

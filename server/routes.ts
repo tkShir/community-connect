@@ -5,7 +5,6 @@ import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { insertProfileSchema } from "@shared/schema";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
@@ -65,6 +64,17 @@ export async function registerRoutes(
     res.json(potential);
   });
 
+  app.get(api.matches.suggested.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
+    
+    const suggested = await storage.getSuggestedMatches(myProfile.id);
+    res.json(suggested);
+  });
+
   app.get(api.matches.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
@@ -86,7 +96,6 @@ export async function registerRoutes(
     try {
       const { receiverId } = api.matches.create.input.parse(req.body);
       
-      // Prevent self-match
       if (receiverId === myProfile.id) {
         return res.status(400).json({ message: "Cannot match with yourself" });
       }
@@ -94,8 +103,14 @@ export async function registerRoutes(
       const match = await storage.createMatch({
         initiatorId: myProfile.id,
         receiverId,
-        // status defaults to pending
       });
+
+      // Notification for receiver
+      const receiverProfile = await storage.getProfile(receiverId);
+      if (receiverProfile) {
+        await storage.createNotification(receiverProfile.userId, `${myProfile.alias} sent you a connection request!`);
+      }
+
       res.status(201).json(match);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -120,12 +135,18 @@ export async function registerRoutes(
       const match = await storage.getMatch(matchId);
       if (!match) return res.status(404).json({ message: "Match not found" });
 
-      // Only receiver can accept/reject, or initiator can cancel (maybe? keep simple for now)
       if (match.receiverId !== myProfile.id) {
         return res.status(403).json({ message: "Not authorized to respond to this match" });
       }
 
       const updated = await storage.updateMatchStatus(matchId, status);
+      
+      // Notification for initiator
+      const initiatorProfile = await storage.getProfile(match.initiatorId);
+      if (initiatorProfile) {
+        await storage.createNotification(initiatorProfile.userId, `${myProfile.alias} ${status} your connection request!`);
+      }
+
       res.json(updated);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -136,63 +157,18 @@ export async function registerRoutes(
     }
   });
 
-  // === Messages ===
-
-  app.get(api.messages.list.path, async (req, res) => {
+  // === Notifications ===
+  app.get(api.notifications.list.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     const userId = (req.user as any).claims.sub;
-    const myProfile = await storage.getProfileByUserId(userId);
-    
-    if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
-
-    const matchId = Number(req.params.matchId);
-    const match = await storage.getMatch(matchId);
-    if (!match) return res.status(404).json({ message: "Match not found" });
-
-    // Verify participation
-    if (match.initiatorId !== myProfile.id && match.receiverId !== myProfile.id) {
-      return res.status(403).json({ message: "Not a participant" });
-    }
-
-    const messages = await storage.getMessages(matchId);
-    res.json(messages);
+    const notifs = await storage.getNotifications(userId);
+    res.json(notifs);
   });
 
-  app.post(api.messages.create.path, async (req, res) => {
+  app.patch(api.notifications.markRead.path, async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
-    const myProfile = await storage.getProfileByUserId(userId);
-    
-    if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
-
-    try {
-      const matchId = Number(req.params.matchId);
-      const { content } = api.messages.create.input.parse(req.body);
-
-      const match = await storage.getMatch(matchId);
-      if (!match) return res.status(404).json({ message: "Match not found" });
-
-      if (match.status !== 'accepted') {
-         return res.status(400).json({ message: "Match must be accepted to message" });
-      }
-
-      if (match.initiatorId !== myProfile.id && match.receiverId !== myProfile.id) {
-        return res.status(403).json({ message: "Not a participant" });
-      }
-
-      const message = await storage.createMessage({
-        matchId,
-        senderId: myProfile.id,
-        content
-      });
-      res.status(201).json(message);
-    } catch (err) {
-       if (err instanceof z.ZodError) {
-        res.status(400).json({ message: err.errors[0].message });
-      } else {
-        res.status(500).json({ message: "Internal server error" });
-      }
-    }
+    await storage.markNotificationRead(Number(req.params.id));
+    res.json({ success: true });
   });
 
   // Seed data
@@ -202,14 +178,8 @@ export async function registerRoutes(
 }
 
 async function seedDatabase() {
-  // Check if any profiles exist. If not, seed.
-  // We can only seed if we have users. 
-  // Let's create dummy users in the 'users' table directly for seeding purposes.
-  
   const existingProfiles = await db.select().from(profiles).limit(1);
   if (existingProfiles.length > 0) return;
-
-  console.log("Seeding database...");
 
   const seedUsers = [
     { id: "seed_user_1", email: "alex@example.com", firstName: "Alex", lastName: "Doe" },
@@ -227,11 +197,14 @@ async function seedDatabase() {
       userId: "seed_user_1",
       alias: "TechSeeker",
       bio: "Software engineer looking for mentorship in AI.",
-      profession: "Software Engineer",
+      profession: "Technology",
       hobbies: ["Coding", "Hiking", "Gaming"],
       interests: ["AI", "Startups", "Machine Learning"],
       goal: "mentee",
-      isPublic: true
+      isPublic: true,
+      ageRange: "23-26",
+      contactMethod: "email",
+      contactValue: "alex@example.com"
     },
     {
       userId: "seed_user_2",
@@ -241,33 +214,40 @@ async function seedDatabase() {
       hobbies: ["Soccer", "Running", "Cooking"],
       interests: ["Sports", "Fitness", "Nutrition"],
       goal: "soccer",
-      isPublic: true
+      isPublic: true,
+      ageRange: "27-30",
+      contactMethod: "Phone",
+      contactValue: "123-456-7890"
     },
     {
       userId: "seed_user_3",
       alias: "DesignGuru",
       bio: "Senior designer happy to mentor juniors.",
-      profession: "Product Designer",
+      profession: "Technology",
       hobbies: ["Art", "Photography", "Travel"],
       interests: ["Design", "UX", "Mentorship"],
       goal: "mentor",
-      isPublic: true
+      isPublic: true,
+      ageRange: "30-34",
+      contactMethod: "LINE",
+      contactValue: "designguru_line"
     },
     {
       userId: "seed_user_4",
       alias: "StartupFounder",
       bio: "Building a new fintech startup. Need advice.",
-      profession: "Founder",
+      profession: "Finance",
       hobbies: ["Reading", "Networking", "Golf"],
       interests: ["Fintech", "Business", "Investing"],
       goal: "mentor",
-      isPublic: true
+      isPublic: true,
+      ageRange: "above 34",
+      contactMethod: "email",
+      contactValue: "casey@example.com"
     }
   ];
 
   for (const p of seedProfiles) {
     await db.insert(profiles).values(p).onConflictDoNothing();
   }
-
-  console.log("Seeding complete.");
 }
