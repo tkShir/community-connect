@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 
-// GET /api/matches/potential (Discovery)
 export function usePotentialMatches() {
   return useQuery({
     queryKey: [api.matches.potential.path],
@@ -14,7 +13,17 @@ export function usePotentialMatches() {
   });
 }
 
-// GET /api/matches (My Matches)
+export function useSuggestedMatches() {
+  return useQuery({
+    queryKey: [api.matches.suggested.path],
+    queryFn: async () => {
+      const res = await fetch(api.matches.suggested.path, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch suggested matches");
+      return api.matches.suggested.responses[200].parse(await res.json());
+    },
+  });
+}
+
 export function useMatches() {
   return useQuery({
     queryKey: [api.matches.list.path],
@@ -26,7 +35,6 @@ export function useMatches() {
   });
 }
 
-// POST /api/matches (Request Connection)
 export function useRequestMatch() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -45,16 +53,16 @@ export function useRequestMatch() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [api.matches.potential.path] });
+      queryClient.invalidateQueries({ queryKey: [api.matches.suggested.path] });
       queryClient.invalidateQueries({ queryKey: [api.matches.list.path] });
       toast({
         title: "Request Sent",
-        description: "Your connection request has been sent anonymously.",
+        description: "Your connection request has been sent.",
       });
     },
   });
 }
 
-// PATCH /api/matches/:id (Accept/Reject)
 export function useRespondMatch() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -74,11 +82,12 @@ export function useRespondMatch() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: [api.matches.list.path] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       toast({
-        title: variables.status === 'accepted' ? "Connected!" : "Request Ignored",
-        description: variables.status === 'accepted' 
-          ? "You can now chat with this member." 
-          : "The request has been removed.",
+        title: variables.status === 'accepted' ? "Connected!" : "Request Declined",
+        description: variables.status === 'accepted'
+          ? "You can now see each other's contact info."
+          : "The request has been declined.",
         variant: variables.status === 'accepted' ? "default" : "destructive",
       });
     },

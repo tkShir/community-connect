@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit, LogOut } from "lucide-react";
+import { Edit, LogOut, Phone, Mail, MessageCircle } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 
@@ -15,16 +15,29 @@ export default function Profile() {
 
   if (!profile) return null;
 
+  const getContactIcon = (method: string) => {
+    switch (method?.toLowerCase()) {
+      case "phone":
+        return <Phone className="w-4 h-4" />;
+      case "email":
+        return <Mail className="w-4 h-4" />;
+      case "line":
+        return <MessageCircle className="w-4 h-4" />;
+      default:
+        return <Mail className="w-4 h-4" />;
+    }
+  };
+
   return (
     <div className="space-y-8 max-w-3xl mx-auto">
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-display font-bold">My Profile</h1>
-          <p className="text-muted-foreground mt-2">This is how you appear to others anonymously.</p>
+          <p className="text-muted-foreground mt-2">This is how you appear to others.</p>
         </div>
         <Link href="/onboarding">
-          <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10">
-            <Edit className="w-4 h-4 mr-2" /> Edit Persona
+          <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10" data-testid="button-edit-profile">
+            <Edit className="w-4 h-4 mr-2" /> Edit Profile
           </Button>
         </Link>
       </div>
@@ -37,15 +50,16 @@ export default function Profile() {
             </div>
           </div>
         </div>
-        
+
         <CardHeader className="pt-16 pb-6 px-8">
           <div className="flex justify-between items-start">
             <div>
               <h2 className="text-3xl font-bold text-foreground">{profile.alias}</h2>
               <p className="text-lg text-primary mt-1">{profile.profession}</p>
+              <p className="text-sm text-muted-foreground mt-1">{profile.ageRange}</p>
             </div>
             <Badge className="bg-primary text-primary-foreground px-4 py-1.5 text-sm uppercase tracking-wide">
-              {profile.goal.replace('_', ' ')}
+              {profile.goal?.replace("_", " ")}
             </Badge>
           </div>
         </CardHeader>
@@ -60,7 +74,7 @@ export default function Profile() {
             <div>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Interests</h3>
               <div className="flex flex-wrap gap-2">
-                {profile.interests.map(tag => (
+                {profile.interests.map((tag: string) => (
                   <Badge key={tag} variant="secondary" className="bg-secondary text-secondary-foreground border border-white/5 py-1.5 px-3">
                     {tag}
                   </Badge>
@@ -70,7 +84,7 @@ export default function Profile() {
             <div>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Hobbies</h3>
               <div className="flex flex-wrap gap-2">
-                {profile.hobbies.map(tag => (
+                {profile.hobbies.map((tag: string) => (
                   <Badge key={tag} variant="outline" className="border-white/10 text-muted-foreground py-1.5 px-3">
                     {tag}
                   </Badge>
@@ -78,12 +92,21 @@ export default function Profile() {
               </div>
             </div>
           </div>
+
+          <div className="pt-6 border-t border-white/10">
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Contact Info</h3>
+            <div className="flex items-center gap-3 text-lg">
+              {getContactIcon(profile.contactMethod)}
+              <span className="text-muted-foreground">{profile.contactMethod}:</span>
+              <span className="font-medium">{profile.contactValue}</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
       <div className="flex justify-center pt-8">
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           onClick={() => logout()}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         >

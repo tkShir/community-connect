@@ -8,11 +8,11 @@ import { useMyProfile } from "@/hooks/use-profiles";
 import { Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
-// Pages
 import Landing from "@/pages/Landing";
 import Onboarding from "@/pages/Onboarding";
 import Discover from "@/pages/Discover";
-import Chat from "@/pages/Chat";
+import Suggested from "@/pages/Suggested";
+import Connections from "@/pages/Connections";
 import Profile from "@/pages/Profile";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
@@ -38,14 +38,11 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!user) return null;
 
-  // Force onboarding if no profile exists
   if (!profile && window.location.pathname !== "/onboarding") {
-    // Small hack to redirect within component render safely
     setTimeout(() => setLocation("/onboarding"), 0);
     return null;
   }
 
-  // If trying to access onboarding but already has profile
   if (profile && window.location.pathname === "/onboarding") {
     setTimeout(() => setLocation("/discover"), 0);
     return null;
@@ -64,7 +61,8 @@ function Router() {
       <Route path="/" component={Landing} />
       <Route path="/onboarding" component={() => <ProtectedRoute component={Onboarding} />} />
       <Route path="/discover" component={() => <ProtectedRoute component={Discover} />} />
-      <Route path="/chat" component={() => <ProtectedRoute component={Chat} />} />
+      <Route path="/suggested" component={() => <ProtectedRoute component={Suggested} />} />
+      <Route path="/connections" component={() => <ProtectedRoute component={Connections} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
       <Route component={NotFound} />
     </Switch>
