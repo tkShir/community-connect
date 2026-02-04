@@ -1,9 +1,10 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications,
+  profiles, matches, notifications, events,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
-  type MatchWithProfile
+  type MatchWithProfile,
+  type Event, type InsertEvent
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
 
@@ -28,6 +29,18 @@ export interface IStorage {
   createNotification(userId: string, content: string): Promise<any>;
   getNotifications(userId: string): Promise<any[]>;
   markNotificationRead(id: number): Promise<void>;
+
+  // Events
+  createEvent(event: InsertEvent, creatorId: string, createdByAdmin: boolean): Promise<Event>;
+  getEvent(id: number): Promise<Event | undefined>;
+  updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event | undefined>;
+  getPublishedEvents(): Promise<Event[]>;
+  getPendingEvents(): Promise<Event[]>;
+  getAllEvents(): Promise<Event[]>;
+  getUserEvents(userId: string): Promise<Event[]>;
+  approveEvent(id: number): Promise<Event | undefined>;
+  denyEvent(id: number, reason: string): Promise<Event | undefined>;
+  deleteEvent(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -169,6 +182,57 @@ export class DatabaseStorage implements IStorage {
   async updateProfileAdmin(id: number, profileUpdate: Partial<InsertProfile> & { isAdmin?: boolean }): Promise<Profile | undefined> {
     const [updated] = await db.update(profiles).set(profileUpdate).where(eq(profiles.id, id)).returning();
     return updated;
+  }
+
+  async createEvent(event: InsertEvent, creatorId: string, createdByAdmin: boolean): Promise<Event> {
+    const status = createdByAdmin ? "published" : "pending_approval";
+    const [created] = await db.insert(events).values({
+      ...event,
+      creatorId,
+      createdByAdmin,
+      status,
+    }).returning();
+    return created;
+  }
+
+  async getEvent(id: number): Promise<Event | undefined> {
+    const [event] = await db.select().from(events).where(eq(events.id, id));
+    return event;
+  }
+
+  async updateEvent(id: number, eventUpdate: Partial<InsertEvent>): Promise<Event | undefined> {
+    const [updated] = await db.update(events).set({ ...eventUpdate, updatedAt: new Date() }).where(eq(events.id, id)).returning();
+    return updated;
+  }
+
+  async getPublishedEvents(): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.status, "published")).orderBy(desc(events.eventDate));
+  }
+
+  async getPendingEvents(): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.status, "pending_approval")).orderBy(desc(events.createdAt));
+  }
+
+  async getAllEvents(): Promise<Event[]> {
+    return await db.select().from(events).orderBy(desc(events.createdAt));
+  }
+
+  async getUserEvents(userId: string): Promise<Event[]> {
+    return await db.select().from(events).where(eq(events.creatorId, userId)).orderBy(desc(events.createdAt));
+  }
+
+  async approveEvent(id: number): Promise<Event | undefined> {
+    const [updated] = await db.update(events).set({ status: "published", updatedAt: new Date() }).where(eq(events.id, id)).returning();
+    return updated;
+  }
+
+  async denyEvent(id: number, reason: string): Promise<Event | undefined> {
+    const [updated] = await db.update(events).set({ status: "denied", denialReason: reason, updatedAt: new Date() }).where(eq(events.id, id)).returning();
+    return updated;
+  }
+
+  async deleteEvent(id: number): Promise<void> {
+    await db.delete(events).where(eq(events.id, id));
   }
 }
 

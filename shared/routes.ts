@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, insertMatchSchema, profiles, matches, notifications } from './schema';
+import { insertProfileSchema, insertMatchSchema, insertEventSchema, profiles, matches, notifications, events } from './schema';
 
 export const profileInputSchema = insertProfileSchema.extend({
   alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
@@ -16,6 +16,17 @@ export const adminProfileUpdateSchema = z.object({
   isAdmin: z.boolean().optional(),
   contactMethod: z.string().optional(),
   contactValue: z.string().optional(),
+});
+
+export const eventInputSchema = insertEventSchema.extend({
+  title: z.string().min(1, "Title is required").min(3, "Title must be at least 3 characters"),
+  description: z.string().min(1, "Description is required"),
+  location: z.string().min(1, "Location is required"),
+  eventTime: z.string().min(1, "Event time is required"),
+});
+
+export const eventDenySchema = z.object({
+  reason: z.string().min(1, "Denial reason is required"),
 });
 
 // ============================================
@@ -122,6 +133,39 @@ export const api = {
       path: '/api/notifications/:id/read',
       responses: {
         200: z.object({ success: z.boolean() }),
+      },
+    },
+  },
+  events: {
+    published: {
+      method: 'GET' as const,
+      path: '/api/events',
+      responses: {
+        200: z.array(z.custom<typeof events.$inferSelect>()),
+      },
+    },
+    myEvents: {
+      method: 'GET' as const,
+      path: '/api/events/mine',
+      responses: {
+        200: z.array(z.custom<typeof events.$inferSelect>()),
+      },
+    },
+    get: {
+      method: 'GET' as const,
+      path: '/api/events/:id',
+      responses: {
+        200: z.custom<typeof events.$inferSelect>(),
+        404: errorSchemas.notFound,
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/events',
+      input: eventInputSchema,
+      responses: {
+        201: z.custom<typeof events.$inferSelect>(),
+        400: errorSchemas.validation,
       },
     },
   },

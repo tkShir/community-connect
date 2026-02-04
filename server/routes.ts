@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth";
-import { api, adminProfileUpdateSchema } from "@shared/routes";
+import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
@@ -207,6 +207,175 @@ export async function registerRoutes(
       } else {
         res.status(500).json({ message: "Internal server error" });
       }
+    }
+  });
+
+  // === Events Routes ===
+
+  // Get all published events (public)
+  app.get(api.events.published.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const events = await storage.getPublishedEvents();
+    res.json(events);
+  });
+
+  // Get user's own events
+  app.get(api.events.myEvents.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const events = await storage.getUserEvents(userId);
+    res.json(events);
+  });
+
+  // Get single event
+  app.get(api.events.get.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const event = await storage.getEvent(Number(req.params.id));
+    if (!event) return res.status(404).json({ message: "Event not found" });
+    res.json(event);
+  });
+
+  // Create event (user = pending, admin = published)
+  app.post(api.events.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    const isAdmin = myProfile?.isAdmin || false;
+
+    try {
+      const input = eventInputSchema.parse(req.body);
+      const event = await storage.createEvent(input, userId, isAdmin);
+      res.status(201).json(event);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  // Admin: Get all events
+  app.get("/api/admin/events", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    const allEvents = await storage.getAllEvents();
+    res.json(allEvents);
+  });
+
+  // Admin: Get pending events
+  app.get("/api/admin/events/pending", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    
+    const pendingEvents = await storage.getPendingEvents();
+    res.json(pendingEvents);
+  });
+
+  // Admin: Update event
+  app.patch("/api/admin/events/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const eventId = Number(req.params.id);
+      const updated = await storage.updateEvent(eventId, req.body);
+      if (!updated) return res.status(404).json({ message: "Event not found" });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Approve event
+  app.post("/api/admin/events/:id/approve", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const eventId = Number(req.params.id);
+      const event = await storage.getEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+
+      const updated = await storage.approveEvent(eventId);
+      
+      // Notify the event creator
+      await storage.createNotification(event.creatorId, `Your event "${event.title}" has been approved and published!`);
+      
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Deny event
+  app.post("/api/admin/events/:id/deny", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const { reason } = eventDenySchema.parse(req.body);
+      const eventId = Number(req.params.id);
+      const event = await storage.getEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Event not found" });
+
+      const updated = await storage.denyEvent(eventId, reason);
+      
+      // Notify the event creator with reason
+      await storage.createNotification(event.creatorId, `Your event "${event.title}" was denied. Reason: ${reason}`);
+      
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  // Admin: Delete event
+  app.delete("/api/admin/events/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const eventId = Number(req.params.id);
+      await storage.deleteEvent(eventId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
