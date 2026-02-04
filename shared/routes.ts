@@ -23,6 +23,7 @@ export const eventInputSchema = insertEventSchema.extend({
   description: z.string().min(1, "Description is required"),
   location: z.string().min(1, "Location is required"),
   eventTime: z.string().min(1, "Event time is required"),
+  eventDate: z.coerce.date(),
 });
 
 export const eventDenySchema = z.object({

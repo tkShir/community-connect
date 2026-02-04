@@ -16,6 +16,7 @@ An exclusive community matching application for professionals (ages 18-35) where
 - Suggested page for mentor/mentee matches in same industry
 - Connections page showing accepted matches with contact info
 - Notifications for connection requests
+- **Events system**: Users can view published events and propose new events; admins can create, approve, deny, and delete events
 
 ## Pages
 - `/` - Landing (simple login)
@@ -23,13 +24,22 @@ An exclusive community matching application for professionals (ages 18-35) where
 - `/discover` - Browse all potential matches
 - `/suggested` - Mentor/mentee suggestions in same industry
 - `/connections` - Manage requests and view accepted connections
+- `/events` - View upcoming events and submit event requests
 - `/profile` - View/edit your profile
+- `/admin` - Admin panel with Users and Events management tabs
 
 ## Database Schema
 - `profiles`: User profiles with alias, bio, profession (text[]), interests (text[]), hobbies (text[]), goal (text[]), ageRange, contactMethod, contactValue
   - profession and goal are text arrays to support multi-select
 - `matches`: Connection requests between profiles (pending/accepted/rejected)
-- `notifications`: Notifications for connection activity
+- `notifications`: Notifications for connection activity and event status updates
+- `events`: Community events with title, description, date, time, location, schedule, status, denialReason, creatorId, createdByAdmin
+
+## Events System
+- **Event statuses**: draft, pending_approval, published, denied
+- **User flow**: Users propose events (status: pending_approval) → Admin reviews → Approved (published) or Denied (with reason)
+- **Admin flow**: Admin creates events → Auto-published immediately
+- **Notifications**: Users receive notifications when their proposed events are approved or denied (with denial reason)
 
 ## Design
 - Dark navy (#0f172a) and gold (#f59e0b) color scheme for exclusive feel
