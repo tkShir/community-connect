@@ -14,6 +14,7 @@ import Discover from "@/pages/Discover";
 import Suggested from "@/pages/Suggested";
 import Connections from "@/pages/Connections";
 import Profile from "@/pages/Profile";
+import Events from "@/pages/Events";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
@@ -60,6 +61,7 @@ function Router() {
       <Route path="/suggested" component={() => <ProtectedRoute component={Suggested} />} />
       <Route path="/connections" component={() => <ProtectedRoute component={Connections} />} />
       <Route path="/profile" component={() => <ProtectedRoute component={Profile} />} />
+      <Route path="/events" component={() => <ProtectedRoute component={Events} />} />
       <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
       <Route component={NotFound} />
     </Switch>
