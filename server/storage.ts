@@ -143,21 +143,45 @@ export class DatabaseStorage implements IStorage {
     
     const myProfessions = Array.isArray(myProfile.profession) ? myProfile.profession : [myProfile.profession];
     const myGoals = Array.isArray(myProfile.goal) ? myProfile.goal : [myProfile.goal];
+    const myInterests = Array.isArray(myProfile.interests) ? myProfile.interests : [myProfile.interests];
+    const myHobbies = Array.isArray(myProfile.hobbies) ? myProfile.hobbies : [myProfile.hobbies];
+    const myAgeRange = myProfile.ageRange;
+    
+    const normalizeGoal = (g: string) => g.toLowerCase().trim();
+    
+    const iWantMentor = myGoals.some(g => normalizeGoal(g).includes('mentor') && !normalizeGoal(g).includes('mentee'));
+    const iWantMentee = myGoals.some(g => normalizeGoal(g).includes('mentee'));
+    const iWantNetworking = myGoals.some(g => normalizeGoal(g).includes('professional') || normalizeGoal(g).includes('networking'));
+    const iWantFriendship = myGoals.some(g => normalizeGoal(g).includes('friendship') || normalizeGoal(g).includes('social'));
+    const iWantActivityPartner = myGoals.some(g => normalizeGoal(g).includes('activity') || normalizeGoal(g).includes('partner'));
     
     return allProfiles.filter(p => {
       const pProfessions = Array.isArray(p.profession) ? p.profession : [p.profession];
       const pGoals = Array.isArray(p.goal) ? p.goal : [p.goal];
+      const pInterests = Array.isArray(p.interests) ? p.interests : [p.interests];
+      const pHobbies = Array.isArray(p.hobbies) ? p.hobbies : [p.hobbies];
       
-      const hasCommonProfession = myProfessions.some(mp => pProfessions.includes(mp));
-      if (!hasCommonProfession) return false;
+      const hasCommonProfession = myProfessions.some(mp => pProfessions.some(pp => mp.toLowerCase() === pp.toLowerCase()));
+      const hasCommonInterests = myInterests.some(mi => pInterests.some(pi => mi.toLowerCase() === pi.toLowerCase()));
+      const hasCommonHobbies = myHobbies.some(mh => pHobbies.some(ph => mh.toLowerCase() === ph.toLowerCase()));
+      const sameAgeRange = myAgeRange === p.ageRange;
       
-      const iWantMentor = myGoals.some(g => g.toLowerCase().includes('mentor') && !g.toLowerCase().includes('mentee'));
-      const iWantMentee = myGoals.some(g => g.toLowerCase().includes('mentee'));
-      const theyWantMentor = pGoals.some(g => g.toLowerCase().includes('mentor') && !g.toLowerCase().includes('mentee'));
-      const theyWantMentee = pGoals.some(g => g.toLowerCase().includes('mentee'));
+      const theyWantMentor = pGoals.some(g => normalizeGoal(g).includes('mentor') && !normalizeGoal(g).includes('mentee'));
+      const theyWantMentee = pGoals.some(g => normalizeGoal(g).includes('mentee'));
       
-      if (iWantMentor && theyWantMentee) return true;
-      if (iWantMentee && theyWantMentor) return true;
+      // Mentor/Mentee matching: complementary goals in same profession
+      if (iWantMentor && theyWantMentee && hasCommonProfession) return true;
+      if (iWantMentee && theyWantMentor && hasCommonProfession) return true;
+      
+      // Professional Networking: common profession OR common interests
+      if (iWantNetworking && (hasCommonProfession || hasCommonInterests)) return true;
+      
+      // Friendship/Social: same age range AND (common interests OR common hobbies)
+      if (iWantFriendship && sameAgeRange && (hasCommonInterests || hasCommonHobbies)) return true;
+      
+      // Activity Partner: common hobbies
+      if (iWantActivityPartner && hasCommonHobbies) return true;
+      
       return false;
     });
   }

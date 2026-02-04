@@ -53,14 +53,22 @@ An exclusive community matching application for professionals (ages 18-35) where
 - Age ranges: below 18, 18-22, 23-26, 27-30, 30-34, above 34
 - Contact methods: Phone, Email, LINE
 
+## Suggested Matches Logic
+The Suggested page shows matches based on your selected goals:
+- **Find a Mentor / Be a Mentee**: Complementary matching - mentor seekers matched with mentee seekers in the same profession
+- **Professional Networking**: Users with common profession/industry OR common professional interests
+- **Friendship/Social**: Users with same age range AND (common interests OR common hobbies)
+- **Activity Partner**: Users with at least one common hobby
+
 ## Recent Updates (Feb 2026)
 - Changed profession and goal fields from text to text[] (arrays) to support multi-select
 - Edit Profile button now works - links to /onboarding where existing data loads
 - Member section in sidebar is clickable and links to profile page
 - All pages (Discover, Suggested, Connections, Profile) updated to display arrays
-- Suggested matches logic: Mentor seekers match with Mentee seekers (complementary matching)
+- Suggested matches now work for all goal types (networking, friendship, activity partner)
 - Discover page matching: Goal-based scoring (Professional Networking → profession/interests, Friendship/Social → age/hobbies, Activity Partner → hobbies)
 - Added isAdmin field to profiles for admin users
 - Created Admin page (/admin) for managing all users - only accessible to admins
+- Events system: Users can view/propose events, admins can create/approve/deny
 - Authentication uses OAuth 2.0 + OpenID Connect via Replit Auth
 - Alias validation: Required field, minimum 2 characters (client and server-side)
