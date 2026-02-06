@@ -26,20 +26,29 @@ An exclusive community matching application for professionals (ages 18-35) where
 - `/connections` - Manage requests and view accepted connections
 - `/events` - View upcoming events and submit event requests
 - `/profile` - View/edit your profile
-- `/admin` - Admin panel with Users and Events management tabs
+- `/groups` - View and join interest groups, suggest new groups
+- `/admin` - Admin panel with Users, Events, and Groups management tabs
 
 ## Database Schema
 - `profiles`: User profiles with alias, bio, profession (text[]), interests (text[]), hobbies (text[]), goal (text[]), ageRange, contactMethod, contactValue
   - profession and goal are text arrays to support multi-select
 - `matches`: Connection requests between profiles (pending/accepted/rejected)
-- `notifications`: Notifications for connection activity and event status updates
+- `notifications`: Notifications for connection activity and event/group status updates
 - `events`: Community events with title, description, date, time, location, schedule, status, denialReason, creatorId, createdByAdmin
+- `groups`: Interest groups with title, description, lineGroupLink, status, denialReason, creatorId, createdByAdmin
 
 ## Events System
 - **Event statuses**: draft, pending_approval, published, denied
 - **User flow**: Users propose events (status: pending_approval) → Admin reviews → Approved (published) or Denied (with reason)
 - **Admin flow**: Admin creates events → Auto-published immediately
 - **Notifications**: Users receive notifications when their proposed events are approved or denied (with denial reason)
+
+## Groups System
+- **Group statuses**: pending_approval, published, denied
+- **User flow**: Users suggest groups (title + description, status: pending_approval) → Admin reviews → Approved (published) or Denied (with reason)
+- **Admin flow**: Admin creates groups with LINE group link → Auto-published immediately; Admin can edit/delete any group
+- **LINE Group Links**: Published groups display a "Join LINE Group" button linking to the LINE group
+- **Notifications**: Users receive notifications when their group suggestions are approved or denied (with denial reason)
 
 ## Design
 - Dark navy (#0f172a) and gold (#f59e0b) color scheme for exclusive feel
@@ -70,5 +79,6 @@ The Suggested page shows matches based on your selected goals:
 - Added isAdmin field to profiles for admin users
 - Created Admin page (/admin) for managing all users - only accessible to admins
 - Events system: Users can view/propose events, admins can create/approve/deny
+- Groups system: Users can view/join groups and suggest new ones, admins can create/approve/deny/edit/delete
 - Authentication uses OAuth 2.0 + OpenID Connect via Replit Auth
 - Alias validation: Required field, minimum 2 characters (client and server-side)

@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./replit_integrations/auth";
 import { registerAuthRoutes } from "./replit_integrations/auth";
-import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema } from "@shared/routes";
+import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
@@ -373,6 +373,144 @@ export async function registerRoutes(
     try {
       const eventId = Number(req.params.id);
       await storage.deleteEvent(eventId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Groups Routes ===
+
+  app.get(api.groups.published.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const publishedGroups = await storage.getPublishedGroups();
+    res.json(publishedGroups);
+  });
+
+  app.get(api.groups.myGroups.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const userGroups = await storage.getUserGroups(userId);
+    res.json(userGroups);
+  });
+
+  app.post(api.groups.create.path, async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    const isAdmin = myProfile?.isAdmin || false;
+
+    try {
+      const input = groupInputSchema.parse(req.body);
+      const group = await storage.createGroup(input, userId, isAdmin);
+      res.status(201).json(group);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  // Admin: Get all groups
+  app.get("/api/admin/groups", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const allGroups = await storage.getAllGroups();
+    res.json(allGroups);
+  });
+
+  // Admin: Get pending groups
+  app.get("/api/admin/groups/pending", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const pendingGroups = await storage.getPendingGroups();
+    res.json(pendingGroups);
+  });
+
+  // Admin: Update group
+  app.patch("/api/admin/groups/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const groupId = Number(req.params.id);
+      const updated = await storage.updateGroup(groupId, req.body);
+      if (!updated) return res.status(404).json({ message: "Group not found" });
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Approve group
+  app.post("/api/admin/groups/:id/approve", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const groupId = Number(req.params.id);
+      const group = await storage.getGroup(groupId);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      const updated = await storage.approveGroup(groupId);
+      await storage.createNotification(group.creatorId, `Your group suggestion "${group.title}" has been approved!`);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Admin: Deny group
+  app.post("/api/admin/groups/:id/deny", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const { reason } = groupDenySchema.parse(req.body);
+      const groupId = Number(req.params.id);
+      const group = await storage.getGroup(groupId);
+      if (!group) return res.status(404).json({ message: "Group not found" });
+      const updated = await storage.denyGroup(groupId, reason);
+      await storage.createNotification(group.creatorId, `Your group suggestion "${group.title}" was denied. Reason: ${reason}`);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  // Admin: Delete group
+  app.delete("/api/admin/groups/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    const userId = (req.user as any).claims.sub;
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const groupId = Number(req.params.id);
+      await storage.deleteGroup(groupId);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });

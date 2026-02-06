@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, insertMatchSchema, insertEventSchema, profiles, matches, notifications, events } from './schema';
+import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, profiles, matches, notifications, events, groups } from './schema';
 
 export const profileInputSchema = insertProfileSchema.extend({
   alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
@@ -27,6 +27,15 @@ export const eventInputSchema = insertEventSchema.extend({
 });
 
 export const eventDenySchema = z.object({
+  reason: z.string().min(1, "Denial reason is required"),
+});
+
+export const groupInputSchema = insertGroupSchema.extend({
+  title: z.string().min(1, "Title is required").min(2, "Title must be at least 2 characters"),
+  description: z.string().min(1, "Description is required"),
+});
+
+export const groupDenySchema = z.object({
   reason: z.string().min(1, "Denial reason is required"),
 });
 
@@ -166,6 +175,31 @@ export const api = {
       input: eventInputSchema,
       responses: {
         201: z.custom<typeof events.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+  groups: {
+    published: {
+      method: 'GET' as const,
+      path: '/api/groups',
+      responses: {
+        200: z.array(z.custom<typeof groups.$inferSelect>()),
+      },
+    },
+    myGroups: {
+      method: 'GET' as const,
+      path: '/api/groups/mine',
+      responses: {
+        200: z.array(z.custom<typeof groups.$inferSelect>()),
+      },
+    },
+    create: {
+      method: 'POST' as const,
+      path: '/api/groups',
+      input: groupInputSchema,
+      responses: {
+        201: z.custom<typeof groups.$inferSelect>(),
         400: errorSchemas.validation,
       },
     },

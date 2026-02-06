@@ -56,6 +56,18 @@ export const events = pgTable("events", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const groups = pgTable("groups", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  lineGroupLink: text("line_group_link"),
+  status: text("status", { enum: ["pending_approval", "published", "denied"] }).default("pending_approval").notNull(),
+  denialReason: text("denial_reason"),
+  creatorId: varchar("creator_id").notNull().references(() => users.id),
+  createdByAdmin: boolean("created_by_admin").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // === RELATIONS ===
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
@@ -94,12 +106,20 @@ export const eventsRelations = relations(events, ({ one }) => ({
   }),
 }));
 
+export const groupsRelations = relations(groups, ({ one }) => ({
+  creator: one(users, {
+    fields: [groups.creatorId],
+    references: [users.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, userId: true });
 export const insertMatchSchema = createInsertSchema(matches).omit({ id: true, createdAt: true, status: true });
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
+export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -113,6 +133,9 @@ export type Notification = typeof notifications.$inferSelect;
 
 export type Event = typeof events.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
+
+export type Group = typeof groups.$inferSelect;
+export type InsertGroup = z.infer<typeof insertGroupSchema>;
 
 export type MatchWithProfile = Match & {
   partnerProfile: Profile;

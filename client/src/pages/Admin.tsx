@@ -12,9 +12,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
+import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
+import type { Group } from "@shared/schema";
 
 export default function Admin() {
   const { toast } = useToast();
@@ -85,7 +87,7 @@ export default function Admin() {
       </header>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
+        <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
             Users ({profiles?.length || 0})
@@ -93,6 +95,10 @@ export default function Admin() {
           <TabsTrigger value="events" data-testid="tab-admin-events">
             <Calendar className="w-4 h-4 mr-2" />
             Events
+          </TabsTrigger>
+          <TabsTrigger value="groups" data-testid="tab-admin-groups">
+            <UsersRound className="w-4 h-4 mr-2" />
+            Groups
           </TabsTrigger>
         </TabsList>
 
@@ -183,6 +189,10 @@ export default function Admin() {
 
         <TabsContent value="events" className="mt-6">
           <EventsManagement />
+        </TabsContent>
+
+        <TabsContent value="groups" className="mt-6">
+          <GroupsManagement />
         </TabsContent>
       </Tabs>
     </div>
@@ -634,6 +644,367 @@ function EventsManagement() {
                 onClick={handleDenyConfirm}
                 disabled={!denyReason.trim() || isDenying}
                 data-testid="button-confirm-deny"
+              >
+                {isDenying ? "Denying..." : "Confirm Denial"}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function GroupsManagement() {
+  const { toast } = useToast();
+  const { data: allGroups, isLoading } = useAdminGroups();
+  const { data: pendingGroups } = usePendingGroups();
+  const { mutate: approveGroup, isPending: isApproving } = useApproveGroup();
+  const { mutate: denyGroup, isPending: isDenying } = useDenyGroup();
+  const { mutate: deleteGroup, isPending: isDeleting } = useDeleteGroup();
+  const { mutate: createGroup, isPending: isCreating } = useCreateGroup();
+  const { mutate: updateGroup, isPending: isUpdating } = useUpdateGroup();
+
+  const [denyDialogOpen, setDenyDialogOpen] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [denyReason, setDenyReason] = useState("");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [newGroup, setNewGroup] = useState({
+    title: "",
+    description: "",
+    lineGroupLink: "",
+  });
+
+  const handleApprove = (id: number) => {
+    approveGroup(id, {
+      onSuccess: () => toast({ title: "Group approved and published!" }),
+      onError: () => toast({ title: "Failed to approve group", variant: "destructive" }),
+    });
+  };
+
+  const handleDenyClick = (id: number) => {
+    setSelectedGroupId(id);
+    setDenyReason("");
+    setDenyDialogOpen(true);
+  };
+
+  const handleDenyConfirm = () => {
+    if (!selectedGroupId || !denyReason.trim()) return;
+    denyGroup(
+      { id: selectedGroupId, reason: denyReason },
+      {
+        onSuccess: () => {
+          toast({ title: "Group denied and user notified" });
+          setDenyDialogOpen(false);
+          setSelectedGroupId(null);
+          setDenyReason("");
+        },
+        onError: () => toast({ title: "Failed to deny group", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleDelete = (id: number) => {
+    deleteGroup(id, {
+      onSuccess: () => toast({ title: "Group deleted" }),
+      onError: () => toast({ title: "Failed to delete group", variant: "destructive" }),
+    });
+  };
+
+  const handleCreateGroup = (e: React.FormEvent) => {
+    e.preventDefault();
+    createGroup(
+      {
+        ...newGroup,
+        lineGroupLink: newGroup.lineGroupLink || null,
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Group created and published!" });
+          setCreateDialogOpen(false);
+          setNewGroup({ title: "", description: "", lineGroupLink: "" });
+        },
+        onError: () => toast({ title: "Failed to create group", variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleEditSave = () => {
+    if (!editingGroup) return;
+    updateGroup(
+      {
+        id: editingGroup.id,
+        data: {
+          title: editingGroup.title,
+          description: editingGroup.description,
+          lineGroupLink: editingGroup.lineGroupLink,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Group updated!" });
+          setEditingGroup(null);
+        },
+        onError: () => toast({ title: "Failed to update group", variant: "destructive" }),
+      }
+    );
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "published":
+        return <Badge className="bg-green-600 text-white">Published</Badge>;
+      case "pending_approval":
+        return <Badge className="bg-yellow-600 text-white">Pending</Badge>;
+      case "denied":
+        return <Badge variant="destructive">Denied</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-xl bg-card/50" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-semibold">Groups Management</h2>
+          <p className="text-sm text-muted-foreground">
+            {pendingGroups?.length || 0} pending approval · {allGroups?.length || 0} total groups
+          </p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-admin-create-group">
+              <Plus className="w-4 h-4 mr-2" />
+              Create Group
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Create New Group</DialogTitle>
+              <DialogDescription>Admin-created groups are published immediately.</DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreateGroup} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Title</Label>
+                <Input
+                  value={newGroup.title}
+                  onChange={(e) => setNewGroup({ ...newGroup, title: e.target.value })}
+                  placeholder="Group name"
+                  data-testid="input-admin-group-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  value={newGroup.description}
+                  onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
+                  placeholder="Brief description of the group"
+                  data-testid="input-admin-group-description"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>LINE Group Link</Label>
+                <Input
+                  value={newGroup.lineGroupLink}
+                  onChange={(e) => setNewGroup({ ...newGroup, lineGroupLink: e.target.value })}
+                  placeholder="https://line.me/ti/g/..."
+                  data-testid="input-admin-group-link"
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={isCreating} data-testid="button-admin-submit-group">
+                  {isCreating ? "Creating..." : "Create & Publish"}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {pendingGroups && pendingGroups.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium flex items-center gap-2">
+            <Clock className="w-5 h-5 text-yellow-500" />
+            Pending Approval ({pendingGroups.length})
+          </h3>
+          {pendingGroups.map((group) => (
+            <Card key={group.id} className="bg-yellow-500/5 border-yellow-500/20" data-testid={`card-pending-group-${group.id}`}>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-semibold">{group.title}</h4>
+                      {getStatusBadge(group.status)}
+                    </div>
+                    <p className="text-sm text-muted-foreground">{group.description}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleApprove(group.id)}
+                      disabled={isApproving}
+                      data-testid={`button-approve-group-${group.id}`}
+                    >
+                      <Check className="w-4 h-4 mr-1" />
+                      Approve
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDenyClick(group.id)}
+                      disabled={isDenying}
+                      data-testid={`button-deny-group-${group.id}`}
+                    >
+                      <XCircle className="w-4 h-4 mr-1" />
+                      Deny
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <div className="space-y-4">
+        <h3 className="text-lg font-medium">All Groups</h3>
+        {allGroups?.length === 0 ? (
+          <div className="text-center py-10 text-muted-foreground">
+            No groups yet. Create one to get started.
+          </div>
+        ) : (
+          allGroups?.map((group) => (
+            <Card key={group.id} className="bg-card border-white/10" data-testid={`card-admin-group-${group.id}`}>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                      <h4 className="font-semibold">{group.title}</h4>
+                      {getStatusBadge(group.status)}
+                      {group.createdByAdmin && (
+                        <Badge variant="outline" className="text-xs">Admin Created</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-2">{group.description}</p>
+                    {group.lineGroupLink && (
+                      <div className="flex items-center gap-1 text-xs text-primary">
+                        <LinkIcon className="w-3 h-3" />
+                        <span className="truncate max-w-[300px]">{group.lineGroupLink}</span>
+                      </div>
+                    )}
+                    {group.status === "denied" && group.denialReason && (
+                      <p className="text-xs text-destructive mt-2">Denial reason: {group.denialReason}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Dialog open={editingGroup?.id === group.id} onOpenChange={(open) => !open && setEditingGroup(null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingGroup({ ...group })}
+                          data-testid={`button-edit-group-${group.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                          <DialogTitle>Edit Group</DialogTitle>
+                        </DialogHeader>
+                        {editingGroup && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>Title</Label>
+                              <Input
+                                value={editingGroup.title}
+                                onChange={(e) => setEditingGroup({ ...editingGroup, title: e.target.value })}
+                                data-testid="input-edit-group-title"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Description</Label>
+                              <Textarea
+                                value={editingGroup.description}
+                                onChange={(e) => setEditingGroup({ ...editingGroup, description: e.target.value })}
+                                data-testid="input-edit-group-description"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>LINE Group Link</Label>
+                              <Input
+                                value={editingGroup.lineGroupLink || ""}
+                                onChange={(e) => setEditingGroup({ ...editingGroup, lineGroupLink: e.target.value })}
+                                placeholder="https://line.me/ti/g/..."
+                                data-testid="input-edit-group-link"
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setEditingGroup(null)}>
+                                Cancel
+                              </Button>
+                              <Button onClick={handleEditSave} disabled={isUpdating} data-testid="button-save-group">
+                                {isUpdating ? "Saving..." : "Save Changes"}
+                              </Button>
+                            </DialogFooter>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(group.id)}
+                      disabled={isDeleting}
+                      data-testid={`button-delete-group-${group.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
+      <Dialog open={denyDialogOpen} onOpenChange={setDenyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deny Group</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for denying this group. The user will be notified.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Textarea
+              value={denyReason}
+              onChange={(e) => setDenyReason(e.target.value)}
+              placeholder="Reason for denial..."
+              data-testid="input-deny-group-reason"
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDenyDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDenyConfirm}
+                disabled={!denyReason.trim() || isDenying}
+                data-testid="button-confirm-deny-group"
               >
                 {isDenying ? "Denying..." : "Confirm Denial"}
               </Button>

@@ -1,10 +1,11 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications, events,
+  profiles, matches, notifications, events, groups,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
   type MatchWithProfile,
-  type Event, type InsertEvent
+  type Event, type InsertEvent,
+  type Group, type InsertGroup
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
 
@@ -41,6 +42,18 @@ export interface IStorage {
   approveEvent(id: number): Promise<Event | undefined>;
   denyEvent(id: number, reason: string): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<void>;
+
+  // Groups
+  createGroup(group: InsertGroup, creatorId: string, createdByAdmin: boolean): Promise<Group>;
+  getGroup(id: number): Promise<Group | undefined>;
+  updateGroup(id: number, group: Partial<InsertGroup>): Promise<Group | undefined>;
+  getPublishedGroups(): Promise<Group[]>;
+  getPendingGroups(): Promise<Group[]>;
+  getAllGroups(): Promise<Group[]>;
+  getUserGroups(userId: string): Promise<Group[]>;
+  approveGroup(id: number): Promise<Group | undefined>;
+  denyGroup(id: number, reason: string): Promise<Group | undefined>;
+  deleteGroup(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -257,6 +270,57 @@ export class DatabaseStorage implements IStorage {
 
   async deleteEvent(id: number): Promise<void> {
     await db.delete(events).where(eq(events.id, id));
+  }
+
+  async createGroup(group: InsertGroup, creatorId: string, createdByAdmin: boolean): Promise<Group> {
+    const status = createdByAdmin ? "published" : "pending_approval";
+    const [created] = await db.insert(groups).values({
+      ...group,
+      creatorId,
+      createdByAdmin,
+      status,
+    }).returning();
+    return created;
+  }
+
+  async getGroup(id: number): Promise<Group | undefined> {
+    const [group] = await db.select().from(groups).where(eq(groups.id, id));
+    return group;
+  }
+
+  async updateGroup(id: number, groupUpdate: Partial<InsertGroup>): Promise<Group | undefined> {
+    const [updated] = await db.update(groups).set(groupUpdate).where(eq(groups.id, id)).returning();
+    return updated;
+  }
+
+  async getPublishedGroups(): Promise<Group[]> {
+    return await db.select().from(groups).where(eq(groups.status, "published")).orderBy(desc(groups.createdAt));
+  }
+
+  async getPendingGroups(): Promise<Group[]> {
+    return await db.select().from(groups).where(eq(groups.status, "pending_approval")).orderBy(desc(groups.createdAt));
+  }
+
+  async getAllGroups(): Promise<Group[]> {
+    return await db.select().from(groups).orderBy(desc(groups.createdAt));
+  }
+
+  async getUserGroups(userId: string): Promise<Group[]> {
+    return await db.select().from(groups).where(eq(groups.creatorId, userId)).orderBy(desc(groups.createdAt));
+  }
+
+  async approveGroup(id: number): Promise<Group | undefined> {
+    const [updated] = await db.update(groups).set({ status: "published" }).where(eq(groups.id, id)).returning();
+    return updated;
+  }
+
+  async denyGroup(id: number, reason: string): Promise<Group | undefined> {
+    const [updated] = await db.update(groups).set({ status: "denied", denialReason: reason }).where(eq(groups.id, id)).returning();
+    return updated;
+  }
+
+  async deleteGroup(id: number): Promise<void> {
+    await db.delete(groups).where(eq(groups.id, id));
   }
 }
 
