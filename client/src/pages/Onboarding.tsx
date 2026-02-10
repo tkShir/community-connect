@@ -16,62 +16,62 @@ import { useEffect } from "react";
 import { z } from "zod";
 
 const PROFESSIONS = [
-  "Technology",
-  "Finance",
-  "Consulting",
-  "Healthcare",
-  "Education",
-  "Arts",
-  "Engineering",
-  "Law",
-  "Marketing",
-  "Real Estate",
+  "テクノロジー",
+  "金融",
+  "コンサルティング",
+  "医療・ヘルスケア",
+  "教育",
+  "アート",
+  "エンジニアリング",
+  "法律",
+  "マーケティング",
+  "不動産",
 ];
 
 const GOALS = [
-  { value: "mentor", label: "Find a Mentor" },
-  { value: "mentee", label: "Find a Mentee" },
-  { value: "networking", label: "Professional Networking" },
-  { value: "friendship", label: "Friendship / Social" },
-  { value: "activity_partner", label: "Activity Partner" },
+  { value: "mentor", label: "メンターを探す" },
+  { value: "mentee", label: "メンティーを探す" },
+  { value: "networking", label: "ビジネス交流" },
+  { value: "friendship", label: "友人・交流" },
+  { value: "activity_partner", label: "一緒に活動する相手" },
 ];
 
 const INTERESTS = [
   "AI",
-  "Startups",
-  "Investing",
-  "UX Design",
-  "Data Science",
-  "Product Management",
-  "Growth Hacking",
-  "Blockchain",
-  "Sustainability",
-  "Leadership",
+  "スタートアップ",
+  "投資",
+  "UXデザイン",
+  "データサイエンス",
+  "プロダクトマネジメント",
+  "グロースハック",
+  "ブロックチェーン",
+  "サステナビリティ",
+  "リーダーシップ",
 ];
 
 const HOBBIES = [
-  "Soccer",
-  "Tennis",
-  "Reading",
-  "Hiking",
-  "Cooking",
-  "Photography",
-  "Traveling",
-  "Yoga",
-  "Gaming",
-  "Painting",
+  "サッカー",
+  "テニス",
+  "読書",
+  "ハイキング",
+  "料理",
+  "写真",
+  "旅行",
+  "ヨガ",
+  "ゲーム",
+  "絵画",
 ];
 
 const AGE_RANGES = [
-  "below 18",
-  "18-22",
-  "23-26",
-  "27-30",
-  "30-34",
-  "above 34",
+  "18歳未満",
+  "18〜22歳",
+  "23〜26歳",
+  "27〜30歳",
+  "30〜34歳",
+  "35歳以上",
 ];
 
-const CONTACT_METHODS = ["Phone", "Email", "LINE"];
+const CONTACT_METHODS = ["電話", "メール", "LINE"];
 
 const formSchema = insertProfileSchema.extend({
   alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
