@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { t } from "@/lib/i18n"
 
 type CarouselApi = UseEmblaCarouselType[1]
 type UseCarouselParameters = Parameters<typeof useEmblaCarousel>
@@ -34,7 +35,12 @@ function useCarousel() {
   const context = React.useContext(CarouselContext)
 
   if (!context) {
-    throw new Error("useCarousel must be used within a <Carousel />")
+    throw new Error(
+      t(
+        "client/src/components/ui/carousel.tsx",
+        "useCarousel must be used within a <Carousel />"
+      )
+    )
   }
 
   return context
@@ -215,7 +221,9 @@ const CarouselPrevious = React.forwardRef<
       {...props}
     >
       <ArrowLeft className="h-4 w-4" />
-      <span className="sr-only">Previous slide</span>
+      <span className="sr-only">
+        {t("client/src/components/ui/carousel.tsx", "Previous slide")}
+      </span>
     </Button>
   )
 })
@@ -244,7 +252,9 @@ const CarouselNext = React.forwardRef<
       {...props}
     >
       <ArrowRight className="h-4 w-4" />
-      <span className="sr-only">Next slide</span>
+      <span className="sr-only">
+        {t("client/src/components/ui/carousel.tsx", "Next slide")}
+      </span>
     </Button>
   )
 })

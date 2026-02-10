@@ -13,8 +13,9 @@ import { useAuth } from "@/hooks/use-auth";
 import { Loader2, Lock, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { t } from "@/lib/i18n";
 
-const ACCESS_CODE = "code";
+const ACCESS_CODE = "testtest";
 const SESSION_KEY = "onyx_access_granted";
 
 export default function Landing() {
@@ -73,14 +74,17 @@ export default function Landing() {
               ONYX
             </h1>
             <p className="text-sm text-muted-foreground uppercase tracking-widest">
-              Exclusive Community
+              {t("client/src/pages/Landing.tsx", "Exclusive Community")}
             </p>
           </div>
 
           <div className="w-16 h-px bg-primary/30 mx-auto" />
 
           <p className="text-muted-foreground leading-relaxed">
-            This is a private, invite-only platform. Enter your access code to continue.
+            {t(
+              "client/src/pages/Landing.tsx",
+              "This is a private, invite-only platform. Enter your access code to continue."
+            )}
           </p>
 
           <Card>
@@ -91,7 +95,7 @@ export default function Landing() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="password"
-                      placeholder="Enter access code"
+                      placeholder={t("client/src/pages/Landing.tsx", "Enter access code")}
                       value={codeInput}
                       onChange={(e) => {
                         setCodeInput(e.target.value);
@@ -117,7 +121,14 @@ export default function Landing() {
                     htmlFor="terms"
                     className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none"
                   >
-                    I agree to the{" "}
+                    {t(
+                      "client/src/pages/Landing.tsx",
+                      "I agree to the Terms of Use and acknowledge that my participation in this community is subject to adherence to the community guidelines."
+                    ).replace(
+                      "利用規約",
+                      ""
+                    )}
+                    <span> </span>
                     <span
                       className="text-primary font-medium underline underline-offset-2 cursor-pointer"
                       onClick={(e) => {
@@ -126,81 +137,118 @@ export default function Landing() {
                       }}
                       data-testid="link-terms"
                     >
-                      Terms of Use
+                      {t("client/src/pages/Landing.tsx", "Terms of Use")}
                     </span>{" "}
-                    and acknowledge that my participation in this community is subject
-                    to adherence to the community guidelines.
                   </label>
                 </div>
 
                 <Dialog open={termsOpen} onOpenChange={setTermsOpen}>
                   <DialogContent className="max-w-lg max-h-[80vh]">
                     <DialogHeader>
-                      <DialogTitle className="font-display text-xl">Terms of Use</DialogTitle>
+                      <DialogTitle className="font-display text-xl">
+                        {t("client/src/pages/Landing.tsx", "Terms of Use")}
+                      </DialogTitle>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh] pr-4">
                       <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
                         <p className="font-medium text-foreground">
-                          ONYX Community Platform - Terms of Use
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "ONYX Community Platform - Terms of Use"
+                          )}
                         </p>
-                        <p className="font-medium text-foreground">1. Acceptance of Terms</p>
-                        <p>
-                          By accessing and using the ONYX platform, you agree to be bound by these
-                          Terms of Use. If you do not agree to these terms, you may not use the
-                          platform.
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "1. Acceptance of Terms")}
                         </p>
-                        <p className="font-medium text-foreground">2. Eligibility</p>
                         <p>
-                          ONYX is designed for professionals aged 18-35. By using this platform,
-                          you confirm that you meet the eligibility requirements and have received
-                          a valid access code through an authorized invitation.
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "By accessing and using the ONYX platform, you agree to be bound by these Terms of Use. If you do not agree to these terms, you may not use the platform."
+                          )}
                         </p>
-                        <p className="font-medium text-foreground">3. Anonymous Profiles</p>
-                        <p>
-                          Users create profiles using aliases. Your real identity remains hidden
-                          until you choose to accept a connection. You agree not to misrepresent
-                          your professional background, interests, or intentions on the platform.
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "2. Eligibility")}
                         </p>
-                        <p className="font-medium text-foreground">4. Community Conduct</p>
                         <p>
-                          You agree to engage respectfully with all community members. Harassment,
-                          discrimination, spam, solicitation, or any form of abusive behavior is
-                          strictly prohibited and may result in immediate removal from the platform.
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "ONYX is designed for professionals aged 18-35. By using this platform, you confirm that you meet the eligibility requirements and have received a valid access code through an authorized invitation."
+                          )}
                         </p>
-                        <p className="font-medium text-foreground">5. Connections &amp; Contact Information</p>
-                        <p>
-                          When you accept a connection, your chosen contact information (phone,
-                          email, or LINE) will be shared with the other party. You are responsible
-                          for the information you choose to share and how you use others' contact
-                          details.
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "3. Anonymous Profiles")}
                         </p>
-                        <p className="font-medium text-foreground">6. Events &amp; Groups</p>
                         <p>
-                          Users may propose events and suggest interest groups, which are subject
-                          to admin approval. The platform reserves the right to approve, deny, or
-                          remove any user-submitted content at its discretion.
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "Users create profiles using aliases. Your real identity remains hidden until you choose to accept a connection. You agree not to misrepresent your professional background, interests, or intentions on the platform."
+                          )}
                         </p>
-                        <p className="font-medium text-foreground">7. Privacy</p>
-                        <p>
-                          We respect your privacy. Your personal data is used solely for the
-                          purpose of providing the platform's matching and community features.
-                          We do not sell or share your information with third parties.
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "4. Community Conduct")}
                         </p>
-                        <p className="font-medium text-foreground">8. Account Termination</p>
                         <p>
-                          ONYX reserves the right to suspend or terminate any account that
-                          violates these terms or community guidelines without prior notice.
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "You agree to engage respectfully with all community members. Harassment, discrimination, spam, solicitation, or any form of abusive behavior is strictly prohibited and may result in immediate removal from the platform."
+                          )}
                         </p>
-                        <p className="font-medium text-foreground">9. Disclaimer</p>
-                        <p>
-                          The platform is provided "as is" without warranties of any kind. ONYX
-                          is not responsible for the outcomes of connections, events, or
-                          interactions facilitated through the platform.
+                        <p className="font-medium text-foreground">
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "5. Connections & Contact Information"
+                          )}
                         </p>
-                        <p className="font-medium text-foreground">10. Changes to Terms</p>
                         <p>
-                          These terms may be updated from time to time. Continued use of the
-                          platform after changes constitutes acceptance of the revised terms.
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "When you accept a connection, your chosen contact information (phone, email, or LINE) will be shared with the other party. You are responsible for the information you choose to share and how you use others' contact details."
+                          )}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "6. Events & Groups")}
+                        </p>
+                        <p>
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "Users may propose events and suggest interest groups, which are subject to admin approval. The platform reserves the right to approve, deny, or remove any user-submitted content at its discretion."
+                          )}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "7. Privacy")}
+                        </p>
+                        <p>
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "We respect your privacy. Your personal data is used solely for the purpose of providing the platform's matching and community features. We do not sell or share your information with third parties."
+                          )}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "8. Account Termination")}
+                        </p>
+                        <p>
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "ONYX reserves the right to suspend or terminate any account that violates these terms or community guidelines without prior notice."
+                          )}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "9. Disclaimer")}
+                        </p>
+                        <p>
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            'The platform is provided "as is" without warranties of any kind. ONYX is not responsible for the outcomes of connections, events, or interactions facilitated through the platform.'
+                          )}
+                        </p>
+                        <p className="font-medium text-foreground">
+                          {t("client/src/pages/Landing.tsx", "10. Changes to Terms")}
+                        </p>
+                        <p>
+                          {t(
+                            "client/src/pages/Landing.tsx",
+                            "These terms may be updated from time to time. Continued use of the platform after changes constitutes acceptance of the revised terms."
+                          )}
                         </p>
                       </div>
                     </ScrollArea>
@@ -219,7 +267,7 @@ export default function Landing() {
                   className="w-full"
                   data-testid="button-enter"
                 >
-                  Enter
+                  {t("client/src/pages/Landing.tsx", "Enter")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </form>
@@ -238,22 +286,25 @@ export default function Landing() {
             ONYX
           </h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest">
-            Exclusive Community
+            {t("client/src/pages/Landing.tsx", "Exclusive Community")}
           </p>
         </div>
 
         <div className="w-16 h-px bg-primary/30 mx-auto" />
 
         <p className="text-muted-foreground leading-relaxed">
-          A private network for professionals seeking meaningful connections.
+          {t(
+            "client/src/pages/Landing.tsx",
+            "A private network for professionals seeking meaningful connections."
+          )}
         </p>
 
-        <a href="/api/login" data-testid="button-login">
+        <a href="/login" data-testid="button-login">
           <Button
             size="lg"
             className="h-12 px-10 text-lg"
           >
-            Member Login
+            {t("client/src/pages/Landing.tsx", "Member Login")}
           </Button>
         </a>
       </div>

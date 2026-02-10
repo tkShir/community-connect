@@ -2,6 +2,9 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import dotenv from "dotenv";
+import { setupAuth0 } from "./auth0";
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
@@ -21,6 +24,9 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Auth0 Express integration (adds /login, /logout, /callback and session handling)
+setupAuth0(app);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -86,10 +92,10 @@ app.use((req, res, next) => {
   }
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
+  // Other ports are firewalled. Default to 5173 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5000", 10);
+  const port = parseInt(process.env.PORT || "5173", 10);
   httpServer.listen(
     {
       port,

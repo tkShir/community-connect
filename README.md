@@ -27,36 +27,23 @@ npm install
 
 This will install all required packages for both the frontend and backend.
 
-### 3. Set Up Environment Variables
+### 3. Setup DB
+```docker-compose up -d```
+
+
+
+### 4. Set Up Environment Variables
+
+
 
 Create a `.env` file in the root directory with the following variables:
 
 ```env
-DATABASE_URL=postgresql://username:password@localhost:5432/onyx
-SESSION_SECRET=your-secret-key-here
+enter env variable stuff here
 ```
 
 Replace:
-- `username` with your PostgreSQL username
-- `password` with your PostgreSQL password
-- `onyx` with your database name
-- `your-secret-key-here` with a random string for session encryption
-
-### 4. Set Up the Database
-
-Create a new PostgreSQL database:
-
-```bash
-createdb onyx
-```
-
-Push the database schema:
-
-```bash
-npm run db:push
-```
-
-This will create all required tables in your database.
+- enter details about what to put in here
 
 ## Running the Application
 
@@ -69,14 +56,14 @@ npm run dev
 ```
 
 The application will be available at:
-- **Frontend**: http://localhost:5000
-- **API**: http://localhost:5000/api
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:5173/api
 
 ### What This Command Does
 
 - Starts the Express.js backend server
 - Starts the Vite development server for the React frontend
-- Both servers run on port 5000 (Vite proxies API requests to Express)
+- Both servers run on port 5173 (Vite proxies API requests to Express)
 
 ## Project Structure
 
@@ -100,7 +87,7 @@ onyx/
 
 ## Demo Walkthrough
 
-1. **Landing Page**: Open http://localhost:5000 in your browser
+1. **Landing Page**: Open http://localhost:5173 in your browser
 2. **Login**: Click "Member Login" to authenticate
 3. **Onboarding**: Create your anonymous profile with:
    - Alias (anonymous name)
@@ -142,9 +129,9 @@ If you see database connection errors:
 
 ### Port Already in Use
 
-If port 5000 is in use:
+If port 5173 is in use:
 ```bash
-lsof -i :5000
+lsof -i :5173
 kill -9 <PID>
 ```
 
@@ -155,3 +142,6 @@ If you encounter module errors:
 rm -rf node_modules
 npm install
 ```
+
+
+Test Login: Password!test123

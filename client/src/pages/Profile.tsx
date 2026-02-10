@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Edit, LogOut, Phone, Mail, MessageCircle } from "lucide-react";
+import { t } from "@/lib/i18n";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 
@@ -32,12 +33,21 @@ export default function Profile() {
     <div className="space-y-8 max-w-3xl mx-auto">
       <div className="flex justify-between items-end">
         <div>
-          <h1 className="text-4xl font-display font-bold">My Profile</h1>
-          <p className="text-muted-foreground mt-2">This is how you appear to others.</p>
+          <h1 className="text-4xl font-display font-bold">
+            {t("client/src/pages/Profile.tsx", "My Profile")}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {t("client/src/pages/Profile.tsx", "This is how you appear to others.")}
+          </p>
         </div>
         <Link href="/onboarding">
-          <Button variant="outline" className="border-primary/30 text-primary hover:bg-primary/10" data-testid="button-edit-profile">
-            <Edit className="w-4 h-4 mr-2" /> Edit Profile
+          <Button
+            variant="outline"
+            className="border-primary/30 text-primary hover:bg-primary/10"
+            data-testid="button-edit-profile"
+          >
+            <Edit className="w-4 h-4 mr-2" />{" "}
+            {t("client/src/pages/Profile.tsx", "Edit Profile")}
           </Button>
         </Link>
       </div>
@@ -72,13 +82,17 @@ export default function Profile() {
 
         <CardContent className="px-8 pb-10 space-y-8">
           <div>
-            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Bio</h3>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              {t("client/src/pages/Profile.tsx", "Bio")}
+            </h3>
             <p className="text-lg leading-relaxed">{profile.bio}</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-8">
             <div>
-              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Interests</h3>
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
+                {t("client/src/pages/Profile.tsx", "Interests")}
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {profile.interests.map((tag: string) => (
                   <Badge key={tag} variant="secondary" className="bg-secondary text-secondary-foreground border border-white/5 py-1.5 px-3">
@@ -88,7 +102,9 @@ export default function Profile() {
               </div>
             </div>
             <div>
-              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Hobbies</h3>
+              <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
+                {t("client/src/pages/Profile.tsx", "Hobbies")}
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {profile.hobbies.map((tag: string) => (
                   <Badge key={tag} variant="outline" className="border-white/10 text-muted-foreground py-1.5 px-3">
@@ -100,7 +116,9 @@ export default function Profile() {
           </div>
 
           <div className="pt-6 border-t border-white/10">
-            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Contact Info</h3>
+            <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
+              {t("client/src/pages/Profile.tsx", "Contact Info")}
+            </h3>
             <div className="flex items-center gap-3 text-lg">
               {getContactIcon(profile.contactMethod)}
               <span className="text-muted-foreground">{profile.contactMethod}:</span>
@@ -116,7 +134,8 @@ export default function Profile() {
           onClick={() => logout()}
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
-          <LogOut className="w-4 h-4 mr-2" /> Log Out
+          <LogOut className="w-4 h-4 mr-2" />{" "}
+          {t("client/src/pages/Profile.tsx", "Log Out")}
         </Button>
       </div>
     </div>

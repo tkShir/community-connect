@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Briefcase, UserPlus, Star, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { t } from "@/lib/i18n";
 
 export default function Discover() {
   const { data: profiles, isLoading, error } = usePotentialMatches();
@@ -21,7 +22,11 @@ export default function Discover() {
   }
 
   if (error) {
-    return <div className="text-center text-red-500 py-10">Failed to load recommendations.</div>;
+    return (
+      <div className="text-center text-red-500 py-10">
+        {t("client/src/pages/Discover.tsx", "Failed to load recommendations.")}
+      </div>
+    );
   }
 
   if (!profiles || profiles.length === 0) {
@@ -30,9 +35,14 @@ export default function Discover() {
         <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
           <Sparkles className="w-10 h-10 text-muted-foreground" />
         </div>
-        <h2 className="text-2xl font-display font-bold mb-2">No new recommendations</h2>
+        <h2 className="text-2xl font-display font-bold mb-2">
+          {t("client/src/pages/Discover.tsx", "No new recommendations")}
+        </h2>
         <p className="text-muted-foreground max-w-md">
-          We've run out of potential matches for now. Check back later as more members join the circle.
+          {t(
+            "client/src/pages/Discover.tsx",
+            "We've run out of potential matches for now. Check back later as more members join the circle."
+          )}
         </p>
       </div>
     );
@@ -41,8 +51,15 @@ export default function Discover() {
   return (
     <div className="space-y-8">
       <header className="mb-8">
-        <h1 className="text-4xl font-display font-bold text-foreground">Discover</h1>
-        <p className="text-muted-foreground mt-2">Find your next connection based on shared interests.</p>
+        <h1 className="text-4xl font-display font-bold text-foreground">
+          {t("client/src/pages/Discover.tsx", "Discover")}
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          {t(
+            "client/src/pages/Discover.tsx",
+            "Find your next connection based on shared interests."
+          )}
+        </p>
       </header>
       
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -116,7 +133,9 @@ export default function Discover() {
                     onClick={() => requestMatch(profile.id)}
                     disabled={isPending}
                   >
-                    {isPending ? "Sending..." : "Connect Anonymously"} 
+                    {isPending
+                      ? t("client/src/pages/Discover.tsx", "Sending...")
+                      : t("client/src/pages/Discover.tsx", "Connect Anonymously")}
                     {!isPending && <UserPlus className="ml-2 w-4 h-4" />}
                   </Button>
                 </CardFooter>

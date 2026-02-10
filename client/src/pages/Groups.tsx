@@ -16,10 +16,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Group } from "@shared/schema";
+import { t } from "@/lib/i18n";
 
 const suggestFormSchema = z.object({
-  title: z.string().min(2, "Title must be at least 2 characters"),
-  description: z.string().min(1, "Description is required"),
+  title: z
+    .string()
+    .min(2, t("client/src/pages/Groups.tsx", "Title must be at least 2 characters")),
+  description: z
+    .string()
+    .min(1, t("client/src/pages/Groups.tsx", "Description is required")),
 });
 
 type SuggestFormValues = z.infer<typeof suggestFormSchema>;
@@ -44,16 +49,21 @@ export default function Groups() {
     suggestGroup(data, {
       onSuccess: () => {
         toast({
-          title: "Group suggested",
-          description: "Your group suggestion has been submitted for admin review.",
+          title: t("client/src/pages/Groups.tsx", "Group suggested"),
+          description: t(
+            "client/src/pages/Groups.tsx",
+            "Your group suggestion has been submitted for admin review."
+          ),
         });
         form.reset();
         setIsDialogOpen(false);
       },
       onError: (error: any) => {
         toast({
-          title: "Error",
-          description: error.message || "Failed to submit group suggestion",
+          title: t("client/src/pages/Groups.tsx", "Error"),
+          description:
+            error.message ||
+            t("client/src/pages/Groups.tsx", "Failed to submit group suggestion"),
           variant: "destructive",
         });
       },
@@ -63,11 +73,23 @@ export default function Groups() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "published":
-        return <Badge className="bg-green-600 text-white">Published</Badge>;
+        return (
+          <Badge className="bg-green-600 text-white">
+            {t("client/src/pages/Groups.tsx", "Published")}
+          </Badge>
+        );
       case "pending_approval":
-        return <Badge className="bg-yellow-600 text-white">Pending Approval</Badge>;
+        return (
+          <Badge className="bg-yellow-600 text-white">
+            {t("client/src/pages/Groups.tsx", "Pending Approval")}
+          </Badge>
+        );
       case "denied":
-        return <Badge variant="destructive">Denied</Badge>;
+        return (
+          <Badge variant="destructive">
+            {t("client/src/pages/Groups.tsx", "Denied")}
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -87,8 +109,15 @@ export default function Groups() {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-display font-bold text-foreground">Groups</h1>
-          <p className="text-muted-foreground mt-2">Join interest groups and connect with like-minded people.</p>
+          <h1 className="text-4xl font-display font-bold text-foreground">
+            {t("client/src/pages/Groups.tsx", "Groups")}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {t(
+              "client/src/pages/Groups.tsx",
+              "Join interest groups and connect with like-minded people."
+            )}
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -99,9 +128,14 @@ export default function Groups() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Suggest a New Group</DialogTitle>
+              <DialogTitle>
+                {t("client/src/pages/Groups.tsx", "Suggest a New Group")}
+              </DialogTitle>
               <DialogDescription>
-                Submit your group idea for admin approval. Once approved, it will be visible to all members.
+                {t(
+                  "client/src/pages/Groups.tsx",
+                  "Submit your group idea for admin approval. Once approved, it will be visible to all members."
+                )}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -111,9 +145,18 @@ export default function Groups() {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Group Name</FormLabel>
+                      <FormLabel>
+                        {t("client/src/pages/Groups.tsx", "Group Name")}
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Soccer Enthusiasts, Crypto Trading" data-testid="input-group-title" {...field} />
+                        <Input
+                          placeholder={t(
+                            "client/src/pages/Groups.tsx",
+                            "e.g., Soccer Enthusiasts, Crypto Trading"
+                          )}
+                          data-testid="input-group-title"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -124,17 +167,32 @@ export default function Groups() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>
+                        {t("client/src/pages/Groups.tsx", "Description")}
+                      </FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Briefly describe what this group is about..." data-testid="input-group-description" {...field} />
+                        <Textarea
+                          placeholder={t(
+                            "client/src/pages/Groups.tsx",
+                            "Briefly describe what this group is about..."
+                          )}
+                          data-testid="input-group-description"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={isSuggesting} data-testid="button-submit-group">
-                    {isSuggesting ? "Submitting..." : "Submit for Review"}
+                  <Button
+                    type="submit"
+                    disabled={isSuggesting}
+                    data-testid="button-submit-group"
+                  >
+                    {isSuggesting
+                      ? t("client/src/pages/Groups.tsx", "Submitting...")
+                      : t("client/src/pages/Groups.tsx", "Submit for Review")}
                     {!isSuggesting && <Send className="w-4 h-4 ml-2" />}
                   </Button>
                 </DialogFooter>

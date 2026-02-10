@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { ButtonProps, buttonVariants } from "@/components/ui/button"
+import { t } from "@/lib/i18n"
 
 const Pagination = ({ className, ...props }: React.ComponentProps<"nav">) => (
   <nav
@@ -64,7 +65,7 @@ const PaginationPrevious = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => (
   <PaginationLink
-    aria-label="Go to previous page"
+    aria-label={t("client/src/components/ui/pagination.tsx", "Go to previous page")}
     size="default"
     className={cn("gap-1 pl-2.5", className)}
     {...props}
@@ -80,7 +81,7 @@ const PaginationNext = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => (
   <PaginationLink
-    aria-label="Go to next page"
+    aria-label={t("client/src/components/ui/pagination.tsx", "Go to next page")}
     size="default"
     className={cn("gap-1 pr-2.5", className)}
     {...props}
@@ -101,7 +102,9 @@ const PaginationEllipsis = ({
     {...props}
   >
     <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More pages</span>
+    <span className="sr-only">
+      {t("client/src/components/ui/pagination.tsx", "More pages")}
+    </span>
   </span>
 )
 PaginationEllipsis.displayName = "PaginationEllipsis"

@@ -252,7 +252,7 @@ function EditProfileForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["below 18", "18-22", "23-26", "27-30", "30-34", "above 34"].map((range) => (
+              {["18歳未満", "18〜22歳", "23〜26歳", "27〜30歳", "30〜34歳", "35歳以上"].map((range) => (
                 <SelectItem key={range} value={range}>
                   {range}
                 </SelectItem>
@@ -283,7 +283,7 @@ function EditProfileForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["Phone", "Email", "LINE"].map((method) => (
+              {["電話", "メール", "LINE"].map((method) => (
                 <SelectItem key={method} value={method}>
                   {method}
                 </SelectItem>

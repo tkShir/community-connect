@@ -3,20 +3,58 @@ import { Strategy, type VerifyFunction } from "openid-client/passport";
 
 import passport from "passport";
 import session from "express-session";
-import type { Express, RequestHandler } from "express";
+import type { Express, Request, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
+function getIssuerUrl(): string {
+  return (
+    process.env.AUTH0_ISSUER_BASE_URL ??
+    process.env.ISSUER_URL ??
+    "https://replit.com/oidc"
+  );
+}
+
+function getClientId(): string {
+  const clientId =
+    process.env.AUTH0_CLIENT_ID ??
+    process.env.CLIENT_ID;
+
+  if (!clientId) {
+    throw new Error("OIDC client ID is not configured");
+  }
+
+  return clientId;
+}
+
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
+    return await client.discovery(new URL(getIssuerUrl()), getClientId());
   },
   { maxAge: 3600 * 1000 }
 );
+
+function getBaseUrl(req?: Request, domain?: string): string {
+  // Prefer explicit BASE_URL (e.g. http://localhost:5173 in development)
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL.replace(/\/+$/, "");
+  }
+
+  // Fallback to request info if available
+  if (req) {
+    const proto = req.protocol;
+    const host = req.get("host");
+    return `${proto}://${host}`;
+  }
+
+  // Last resort: construct from domain and https
+  if (domain) {
+    return `https://${domain}`;
+  }
+
+  throw new Error("Unable to determine base URL for auth callbacks");
+}
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -82,7 +120,7 @@ export async function setupAuth(app: Express) {
   const registeredStrategies = new Set<string>();
 
   // Helper function to ensure strategy exists for a domain
-  const ensureStrategy = (domain: string) => {
+  const ensureStrategy = (domain: string, req?: Request) => {
     const strategyName = `replitauth:${domain}`;
     if (!registeredStrategies.has(strategyName)) {
       const strategy = new Strategy(
@@ -90,7 +128,9 @@ export async function setupAuth(app: Express) {
           name: strategyName,
           config,
           scope: "openid email profile offline_access",
-          callbackURL: `https://${domain}/api/callback`,
+          // Use BASE_URL when provided (development: http://localhost:5173)
+          // so Auth0 redirects to the correct origin and port.
+          callbackURL: `${getBaseUrl(req, domain)}/api/callback`,
         },
         verify
       );
@@ -103,7 +143,7 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
-    ensureStrategy(req.hostname);
+    ensureStrategy(req.hostname, req);
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -111,7 +151,7 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
-    ensureStrategy(req.hostname);
+    ensureStrategy(req.hostname, req);
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",
@@ -120,10 +160,11 @@ export async function setupAuth(app: Express) {
 
   app.get("/api/logout", (req, res) => {
     req.logout(() => {
+      const baseUrl = getBaseUrl(req, req.hostname);
       res.redirect(
         client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
-          post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
+          client_id: getClientId(),
+          post_logout_redirect_uri: baseUrl,
         }).href
       );
     });
