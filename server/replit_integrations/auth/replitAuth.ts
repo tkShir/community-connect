@@ -72,9 +72,7 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      // In development we run over http://localhost, so cookies
-      // cannot be marked secure or they will not be sent.
-      secure: process.env.NODE_ENV === "production",
+      secure: true,
       maxAge: sessionTtl,
     },
   });
@@ -91,34 +89,12 @@ function updateUserSession(
 }
 
 async function upsertUser(claims: any) {
-  const id = claims.sub ?? claims["sub"];
-  const email = claims.email ?? claims["email"];
-
-  // Auth0 typically uses given_name / family_name / picture
-  const firstName =
-    claims.given_name ??
-    claims["given_name"] ??
-    claims["first_name"] ??
-    undefined;
-
-  const lastName =
-    claims.family_name ??
-    claims["family_name"] ??
-    claims["last_name"] ??
-    undefined;
-
-  const profileImageUrl =
-    claims.picture ??
-    claims["picture"] ??
-    claims["profile_image_url"] ??
-    undefined;
-
   await authStorage.upsertUser({
-    id,
-    email,
-    firstName,
-    lastName,
-    profileImageUrl,
+    id: claims["sub"],
+    email: claims["email"],
+    firstName: claims["first_name"],
+    lastName: claims["last_name"],
+    profileImageUrl: claims["profile_image_url"],
   });
 }
 
