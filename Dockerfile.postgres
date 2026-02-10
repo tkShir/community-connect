@@ -1,0 +1,13 @@
+FROM postgres:14
+
+# Install locales + tzdata and generate ja_JP.UTF-8
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends locales tzdata \
+  && sed -i 's/^# *\(ja_JP.UTF-8 UTF-8\)/\1/' /etc/locale.gen \
+  && locale-gen \
+  && rm -rf /var/lib/apt/lists/*
+
+# Default locale + timezone inside the container
+ENV LANG=ja_JP.UTF-8 \
+    LC_ALL=ja_JP.UTF-8 \
+    TZ=Asia/Tokyo

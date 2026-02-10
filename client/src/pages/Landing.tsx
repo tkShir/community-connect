@@ -14,7 +14,7 @@ import { Loader2, Lock, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 
-const ACCESS_CODE = "code";
+const ACCESS_CODE = "testtest";
 const SESSION_KEY = "onyx_access_granted";
 
 export default function Landing() {

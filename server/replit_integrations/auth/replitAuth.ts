@@ -8,12 +8,29 @@ import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { authStorage } from "./storage";
 
+function getIssuerUrl(): string {
+  return (
+    process.env.AUTH0_ISSUER_BASE_URL ??
+    process.env.ISSUER_URL ??
+    "https://replit.com/oidc"
+  );
+}
+
+function getClientId(): string {
+  const clientId =
+    process.env.AUTH0_CLIENT_ID ??
+    process.env.CLIENT_ID;
+
+  if (!clientId) {
+    throw new Error("OIDC client ID is not configured");
+  }
+
+  return clientId;
+}
+
 const getOidcConfig = memoize(
   async () => {
-    return await client.discovery(
-      new URL(process.env.ISSUER_URL ?? "https://replit.com/oidc"),
-      process.env.REPL_ID!
-    );
+    return await client.discovery(new URL(getIssuerUrl()), getClientId());
   },
   { maxAge: 3600 * 1000 }
 );
@@ -122,7 +139,7 @@ export async function setupAuth(app: Express) {
     req.logout(() => {
       res.redirect(
         client.buildEndSessionUrl(config, {
-          client_id: process.env.REPL_ID!,
+          client_id: getClientId(),
           post_logout_redirect_uri: `${req.protocol}://${req.hostname}`,
         }).href
       );
