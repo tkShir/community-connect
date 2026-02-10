@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { t } from "@/lib/i18n";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -39,13 +40,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0;
 
   const navItems = [
-    { href: "/discover", label: "Discover", icon: Compass },
-    { href: "/suggested", label: "Suggested", icon: Lightbulb },
-    { href: "/connections", label: "Connections", icon: Users },
-    { href: "/events", label: "Events", icon: Calendar },
-    { href: "/groups", label: "Groups", icon: UsersRound },
-    { href: "/profile", label: "My Profile", icon: UserCircle },
-    ...(profile?.isAdmin ? [{ href: "/admin", label: "Admin", icon: Shield }] : []),
+    { href: "/discover", label: t("client/src/components/Layout.tsx", "Discover"), icon: Compass },
+    { href: "/suggested", label: t("client/src/components/Layout.tsx", "Suggested"), icon: Lightbulb },
+    { href: "/connections", label: t("client/src/components/Layout.tsx", "Connections"), icon: Users },
+    { href: "/events", label: t("client/src/components/Layout.tsx", "Events"), icon: Calendar },
+    { href: "/groups", label: t("client/src/components/Layout.tsx", "Groups"), icon: UsersRound },
+    { href: "/profile", label: t("client/src/components/Layout.tsx", "My Profile"), icon: UserCircle },
+    ...(profile?.isAdmin ? [{ href: "/admin", label: t("client/src/components/Layout.tsx", "Admin"), icon: Shield }] : []),
   ];
 
   return (
@@ -99,7 +100,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tighter text-primary">ONYX</h1>
             <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest font-medium">
-              Exclusive Community
+              {t("client/src/components/Layout.tsx", "Exclusive Community")}
             </p>
           </div>
           <NotificationBell
@@ -140,9 +141,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   user.email?.substring(0, 2).toUpperCase()}
               </div>
               <div className="overflow-hidden">
-                <p className="text-sm font-semibold truncate">{profile?.alias || "Member"}</p>
+                <p className="text-sm font-semibold truncate">
+                  {profile?.alias || t("client/src/components/Layout.tsx", "Member")}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {Array.isArray(profile?.profession) ? profile.profession.join(", ") : profile?.profession || "Set up profile"}
+                  {Array.isArray(profile?.profession)
+                    ? profile.profession.join(", ")
+                    : profile?.profession || t("client/src/components/Layout.tsx", "Set up profile")}
                 </p>
               </div>
             </div>
@@ -153,7 +158,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => logout()}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
+            {t("client/src/components/Layout.tsx", "Sign Out")}
           </Button>
         </div>
       </aside>
@@ -188,7 +193,9 @@ function NotificationBell({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
         {!notifications || notifications.length === 0 ? (
-          <div className="p-4 text-center text-muted-foreground text-sm">No notifications</div>
+          <div className="p-4 text-center text-muted-foreground text-sm">
+            {t("client/src/components/Layout.tsx", "No notifications")}
+          </div>
         ) : (
           notifications.map((notif: any) => (
             <DropdownMenuItem

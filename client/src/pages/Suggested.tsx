@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Briefcase, UserPlus, Lightbulb, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { t } from "@/lib/i18n";
 
 export default function Suggested() {
   const { data: profiles, isLoading, error } = useSuggestedMatches();
@@ -21,23 +22,36 @@ export default function Suggested() {
   }
 
   if (error) {
-    return <div className="text-center text-red-500 py-10">Failed to load suggested connections.</div>;
+    return (
+      <div className="text-center text-red-500 py-10">
+        {t("client/src/pages/Suggested.tsx", "Failed to load suggested connections.")}
+      </div>
+    );
   }
 
   if (!profiles || profiles.length === 0) {
     return (
       <div className="space-y-8">
         <header>
-          <h1 className="text-4xl font-display font-bold text-foreground">Suggested Connections</h1>
-          <p className="text-muted-foreground mt-2">Mentor/Mentee matches in your industry.</p>
+          <h1 className="text-4xl font-display font-bold text-foreground">
+            {t("client/src/pages/Suggested.tsx", "Suggested Connections")}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {t("client/src/pages/Suggested.tsx", "Mentor/Mentee matches in your industry.")}
+          </p>
         </header>
         <div className="flex flex-col items-center justify-center h-[40vh] text-center px-4">
           <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
             <Lightbulb className="w-10 h-10 text-muted-foreground" />
           </div>
-          <h2 className="text-2xl font-display font-bold mb-2">No suggestions yet</h2>
+          <h2 className="text-2xl font-display font-bold mb-2">
+            {t("client/src/pages/Suggested.tsx", "No suggestions yet")}
+          </h2>
           <p className="text-muted-foreground max-w-md">
-            We'll suggest mentor/mentee connections when we find people in your industry with complementary goals.
+            {t(
+              "client/src/pages/Suggested.tsx",
+              "We'll suggest mentor/mentee connections when we find people in your industry with complementary goals."
+            )}
           </p>
         </div>
       </div>
@@ -47,9 +61,11 @@ export default function Suggested() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-4xl font-display font-bold text-foreground">Suggested Connections</h1>
+        <h1 className="text-4xl font-display font-bold text-foreground">
+          {t("client/src/pages/Suggested.tsx", "Suggested Connections")}
+        </h1>
         <p className="text-muted-foreground mt-2">
-          People in your industry with complementary goals.
+          {t("client/src/pages/Suggested.tsx", "People in your industry with complementary goals.")}
         </p>
       </header>
 
@@ -108,7 +124,9 @@ export default function Suggested() {
                     disabled={isPending}
                     data-testid={`button-connect-${profile.id}`}
                   >
-                    {isPending ? "Sending..." : "Request Connection"}
+                    {isPending
+                      ? t("client/src/pages/Suggested.tsx", "Sending...")
+                      : t("client/src/pages/Suggested.tsx", "Request Connection")}
                     {!isPending && <UserPlus className="ml-2 w-4 h-4" />}
                   </Button>
                 </CardFooter>

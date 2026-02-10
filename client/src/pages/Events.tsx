@@ -16,13 +16,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { t } from "@/lib/i18n";
 
 const eventFormSchema = z.object({
-  title: z.string().min(3, "Title must be at least 3 characters"),
-  description: z.string().min(1, "Description is required"),
-  eventDate: z.string().min(1, "Date is required"),
-  eventTime: z.string().min(1, "Time is required"),
-  location: z.string().min(1, "Location is required"),
+  title: z
+    .string()
+    .min(3, t("client/src/pages/Events.tsx", "Title must be at least 3 characters")),
+  description: z
+    .string()
+    .min(1, t("client/src/pages/Events.tsx", "Description is required")),
+  eventDate: z.string().min(1, t("client/src/pages/Events.tsx", "Date is required")),
+  eventTime: z.string().min(1, t("client/src/pages/Events.tsx", "Time is required")),
+  location: z.string().min(1, t("client/src/pages/Events.tsx", "Location is required")),
   schedule: z.string().optional(),
 });
 
@@ -57,16 +62,21 @@ export default function Events() {
       {
         onSuccess: () => {
           toast({
-            title: "Event submitted",
-            description: "Your event request has been submitted for review.",
+            title: t("client/src/pages/Events.tsx", "Event submitted"),
+            description: t(
+              "client/src/pages/Events.tsx",
+              "Your event request has been submitted for review."
+            ),
           });
           form.reset();
           setIsDialogOpen(false);
         },
         onError: (error: any) => {
           toast({
-            title: "Error",
-            description: error.message || "Failed to submit event",
+            title: t("client/src/pages/Events.tsx", "Error"),
+            description:
+              error.message ||
+              t("client/src/pages/Events.tsx", "Failed to submit event"),
             variant: "destructive",
           });
         },
@@ -77,11 +87,23 @@ export default function Events() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "published":
-        return <Badge className="bg-green-600 text-white">Published</Badge>;
+        return (
+          <Badge className="bg-green-600 text-white">
+            {t("client/src/pages/Events.tsx", "Published")}
+          </Badge>
+        );
       case "pending_approval":
-        return <Badge className="bg-yellow-600 text-white">Pending Approval</Badge>;
+        return (
+          <Badge className="bg-yellow-600 text-white">
+            {t("client/src/pages/Events.tsx", "Pending Approval")}
+          </Badge>
+        );
       case "denied":
-        return <Badge variant="destructive">Denied</Badge>;
+        return (
+          <Badge variant="destructive">
+            {t("client/src/pages/Events.tsx", "Denied")}
+          </Badge>
+        );
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -110,8 +132,15 @@ export default function Events() {
     <div className="space-y-8">
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-4xl font-display font-bold text-foreground">Events</h1>
-          <p className="text-muted-foreground mt-2">Discover and attend exclusive community events.</p>
+          <h1 className="text-4xl font-display font-bold text-foreground">
+            {t("client/src/pages/Events.tsx", "Events")}
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {t(
+              "client/src/pages/Events.tsx",
+              "Discover and attend exclusive community events."
+            )}
+          </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -122,9 +151,14 @@ export default function Events() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Propose a New Event</DialogTitle>
+              <DialogTitle>
+                {t("client/src/pages/Events.tsx", "Propose a New Event")}
+              </DialogTitle>
               <DialogDescription>
-                Submit your event for admin approval. Once approved, it will be visible to all members.
+                {t(
+                  "client/src/pages/Events.tsx",
+                  "Submit your event for admin approval. Once approved, it will be visible to all members."
+                )}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -134,9 +168,18 @@ export default function Events() {
                   name="title"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Event Title</FormLabel>
+                      <FormLabel>
+                        {t("client/src/pages/Events.tsx", "Event Title")}
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Tech Networking Meetup" data-testid="input-event-title" {...field} />
+                        <Input
+                          placeholder={t(
+                            "client/src/pages/Events.tsx",
+                            "e.g., Tech Networking Meetup"
+                          )}
+                          data-testid="input-event-title"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -147,9 +190,18 @@ export default function Events() {
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>
+                        {t("client/src/pages/Events.tsx", "Description")}
+                      </FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Describe your event..." data-testid="input-event-description" {...field} />
+                        <Textarea
+                          placeholder={t(
+                            "client/src/pages/Events.tsx",
+                            "Describe your event..."
+                          )}
+                          data-testid="input-event-description"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -161,7 +213,7 @@ export default function Events() {
                     name="eventDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Date</FormLabel>
+                        <FormLabel>{t("client/src/pages/Events.tsx", "Date")}</FormLabel>
                         <FormControl>
                           <Input type="date" data-testid="input-event-date" {...field} />
                         </FormControl>
@@ -174,7 +226,7 @@ export default function Events() {
                     name="eventTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Time</FormLabel>
+                        <FormLabel>{t("client/src/pages/Events.tsx", "Time")}</FormLabel>
                         <FormControl>
                           <Input type="time" data-testid="input-event-time" {...field} />
                         </FormControl>
@@ -188,9 +240,18 @@ export default function Events() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <FormLabel>
+                        {t("client/src/pages/Events.tsx", "Location")}
+                      </FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g., Downtown Conference Center" data-testid="input-event-location" {...field} />
+                        <Input
+                          placeholder={t(
+                            "client/src/pages/Events.tsx",
+                            "e.g., Downtown Conference Center"
+                          )}
+                          data-testid="input-event-location"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -201,17 +262,43 @@ export default function Events() {
                   name="schedule"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Schedule (Optional)</FormLabel>
+                      <FormLabel>
+                        {t("client/src/pages/Events.tsx", "Schedule (Optional)")}
+                      </FormLabel>
                       <FormControl>
-                        <Textarea placeholder="6:00 PM - Check-in&#10;6:30 PM - Networking&#10;7:00 PM - Speaker" data-testid="input-event-schedule" {...field} />
+                        <Textarea
+                          placeholder={t(
+                            "client/src/pages/Events.tsx",
+                            "6:00 PM - Check-in"
+                          )
+                            .concat("\n")
+                            .concat(
+                              t(
+                                "client/src/pages/Events.tsx",
+                                "6:30 PM - Networking"
+                              )
+                            )
+                            .concat("\n")
+                            .concat(
+                              t("client/src/pages/Events.tsx", "7:00 PM - Speaker")
+                            )}
+                          data-testid="input-event-schedule"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <DialogFooter>
-                  <Button type="submit" disabled={isCreating} data-testid="button-submit-event">
-                    {isCreating ? "Submitting..." : "Submit for Review"}
+                  <Button
+                    type="submit"
+                    disabled={isCreating}
+                    data-testid="button-submit-event"
+                  >
+                    {isCreating
+                      ? t("client/src/pages/Events.tsx", "Submitting...")
+                      : t("client/src/pages/Events.tsx", "Submit for Review")}
                     {!isCreating && <Send className="w-4 h-4 ml-2" />}
                   </Button>
                 </DialogFooter>

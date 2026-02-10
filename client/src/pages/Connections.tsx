@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Check, X, Phone, Mail, MessageCircle, Users } from "lucide-react";
+import { t } from "@/lib/i18n";
 
 export default function Connections() {
   const { data: matches, isLoading } = useMatches();
@@ -43,14 +44,24 @@ export default function Connections() {
   return (
     <div className="space-y-8">
       <header>
-        <h1 className="text-4xl font-display font-bold text-foreground">Connections</h1>
-        <p className="text-muted-foreground mt-2">Manage your connection requests and view contact details.</p>
+        <h1 className="text-4xl font-display font-bold text-foreground">
+          {t("client/src/pages/Connections.tsx", "Connections")}
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          {t(
+            "client/src/pages/Connections.tsx",
+            "Manage your connection requests and view contact details."
+          )}
+        </p>
       </header>
 
       {pendingRequests.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-muted-foreground uppercase tracking-wide">
-            Incoming Requests ({pendingRequests.length})
+            {t(
+              "client/src/pages/Connections.tsx",
+              "Incoming Requests ({pendingRequests.length})"
+            ).replace("{pendingRequests.length}", String(pendingRequests.length))}
           </h2>
           {pendingRequests.map((match) => (
             <Card key={match.id} className="bg-card border-primary/20">
@@ -80,7 +91,8 @@ export default function Connections() {
                     className="bg-primary text-primary-foreground"
                     data-testid={`button-accept-${match.id}`}
                   >
-                    <Check className="w-4 h-4 mr-1" /> Accept
+                    <Check className="w-4 h-4 mr-1" />{" "}
+                    {t("client/src/pages/Connections.tsx", "Accept")}
                   </Button>
                   <Button
                     size="sm"
@@ -101,7 +113,10 @@ export default function Connections() {
       {sentRequests.length > 0 && (
         <section className="space-y-4">
           <h2 className="text-lg font-semibold text-muted-foreground uppercase tracking-wide">
-            Pending Sent Requests ({sentRequests.length})
+            {t(
+              "client/src/pages/Connections.tsx",
+              "Pending Sent Requests ({sentRequests.length})"
+            ).replace("{sentRequests.length}", String(sentRequests.length))}
           </h2>
           {sentRequests.map((match) => (
             <Card key={match.id} className="bg-card/50 border-white/5">
@@ -115,7 +130,9 @@ export default function Connections() {
                     {Array.isArray(match.partnerProfile.profession) ? match.partnerProfile.profession.join(", ") : match.partnerProfile.profession}
                   </p>
                 </div>
-                <Badge variant="secondary" className="text-xs">Waiting for response</Badge>
+                <Badge variant="secondary" className="text-xs">
+                  {t("client/src/pages/Connections.tsx", "Waiting for response")}
+                </Badge>
               </CardContent>
             </Card>
           ))}
@@ -124,7 +141,10 @@ export default function Connections() {
 
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-muted-foreground uppercase tracking-wide">
-          Accepted Connections ({acceptedConnections.length})
+          {t(
+            "client/src/pages/Connections.tsx",
+            "Accepted Connections ({acceptedConnections.length})"
+          ).replace("{acceptedConnections.length}", String(acceptedConnections.length))}
         </h2>
         {acceptedConnections.length === 0 ? (
           <Card className="bg-card/30 border-white/5">
@@ -132,7 +152,12 @@ export default function Connections() {
               <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
                 <Users className="w-8 h-8 text-muted-foreground" />
               </div>
-              <p className="text-muted-foreground">No connections yet. Discover new people to connect with!</p>
+              <p className="text-muted-foreground">
+                {t(
+                  "client/src/pages/Connections.tsx",
+                  "No connections yet. Discover new people to connect with!"
+                )}
+              </p>
             </CardContent>
           </Card>
         ) : (

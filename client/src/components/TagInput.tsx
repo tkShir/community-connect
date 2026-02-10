@@ -2,6 +2,7 @@ import { useState, KeyboardEvent, useRef } from "react";
 import { X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/i18n";
 
 interface TagInputProps {
   value: string[];
@@ -15,7 +16,7 @@ interface TagInputProps {
 export function TagInput({
   value,
   onChange,
-  placeholder = "Type and press Enter",
+  placeholder = t("client/src/components/TagInput.tsx", "Type and press Enter"),
   suggestions = [],
   maxTags,
   "data-testid": testId,
