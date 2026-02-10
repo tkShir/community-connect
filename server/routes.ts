@@ -1,35 +1,39 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./replit_integrations/auth";
-import { registerAuthRoutes } from "./replit_integrations/auth";
 import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
 
+function isAuthed(req: Request): boolean {
+  const anyReq = req as any;
+  return !!anyReq.oidc?.isAuthenticated?.();
+}
+
+function getUserId(req: Request): string {
+  const anyReq = req as any;
+  return anyReq.oidc?.user?.sub as string;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  // Auth setup
-  await setupAuth(app);
-  registerAuthRoutes(app);
-
   // === Profiles ===
   
   app.get(api.profiles.me.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const profile = await storage.getProfileByUserId(userId);
     if (!profile) return res.status(404).json({ message: "Profile not found" });
     res.json(profile);
   });
 
   app.post(api.profiles.upsert.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     
     try {
       const input = api.profiles.upsert.input.parse(req.body);
@@ -45,7 +49,7 @@ export async function registerRoutes(
   });
 
   app.get(api.profiles.get.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!isAuthed(req)) return res.sendStatus(401);
     const profile = await storage.getProfile(Number(req.params.id));
     if (!profile) return res.status(404).json({ message: "Profile not found" });
     res.json(profile);
@@ -54,8 +58,8 @@ export async function registerRoutes(
   // === Matches ===
 
   app.get(api.matches.potential.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
@@ -65,8 +69,8 @@ export async function registerRoutes(
   });
 
   app.get(api.matches.suggested.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
@@ -76,8 +80,8 @@ export async function registerRoutes(
   });
 
   app.get(api.matches.list.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
@@ -87,8 +91,8 @@ export async function registerRoutes(
   });
 
   app.post(api.matches.create.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
@@ -122,8 +126,8 @@ export async function registerRoutes(
   });
 
   app.patch(api.matches.respond.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile) return res.status(400).json({ message: "Create a profile first" });
@@ -159,14 +163,14 @@ export async function registerRoutes(
 
   // === Notifications ===
   app.get(api.notifications.list.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const notifs = await storage.getNotifications(userId);
     res.json(notifs);
   });
 
   app.patch(api.notifications.markRead.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!isAuthed(req)) return res.sendStatus(401);
     await storage.markNotificationRead(Number(req.params.id));
     res.json({ success: true });
   });
@@ -174,8 +178,8 @@ export async function registerRoutes(
   // === Admin Routes ===
   
   app.get("/api/admin/profiles", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -187,8 +191,8 @@ export async function registerRoutes(
   });
 
   app.patch("/api/admin/profiles/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -214,22 +218,22 @@ export async function registerRoutes(
 
   // Get all published events (public)
   app.get(api.events.published.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!isAuthed(req)) return res.sendStatus(401);
     const events = await storage.getPublishedEvents();
     res.json(events);
   });
 
   // Get user's own events
   app.get(api.events.myEvents.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const events = await storage.getUserEvents(userId);
     res.json(events);
   });
 
   // Get single event
   app.get(api.events.get.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!isAuthed(req)) return res.sendStatus(401);
     const event = await storage.getEvent(Number(req.params.id));
     if (!event) return res.status(404).json({ message: "Event not found" });
     res.json(event);
@@ -237,8 +241,8 @@ export async function registerRoutes(
 
   // Create event (user = pending, admin = published)
   app.post(api.events.create.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     const isAdmin = myProfile?.isAdmin || false;
 
@@ -257,8 +261,8 @@ export async function registerRoutes(
 
   // Admin: Get all events
   app.get("/api/admin/events", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -271,8 +275,8 @@ export async function registerRoutes(
 
   // Admin: Get pending events
   app.get("/api/admin/events/pending", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -285,8 +289,8 @@ export async function registerRoutes(
 
   // Admin: Update event
   app.patch("/api/admin/events/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -305,8 +309,8 @@ export async function registerRoutes(
 
   // Admin: Approve event
   app.post("/api/admin/events/:id/approve", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -331,8 +335,8 @@ export async function registerRoutes(
 
   // Admin: Deny event
   app.post("/api/admin/events/:id/deny", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -362,8 +366,8 @@ export async function registerRoutes(
 
   // Admin: Delete event
   app.delete("/api/admin/events/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     
     if (!myProfile || !myProfile.isAdmin) {
@@ -382,21 +386,21 @@ export async function registerRoutes(
   // === Groups Routes ===
 
   app.get(api.groups.published.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!isAuthed(req)) return res.sendStatus(401);
     const publishedGroups = await storage.getPublishedGroups();
     res.json(publishedGroups);
   });
 
   app.get(api.groups.myGroups.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const userGroups = await storage.getUserGroups(userId);
     res.json(userGroups);
   });
 
   app.post(api.groups.create.path, async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     const isAdmin = myProfile?.isAdmin || false;
 
@@ -415,8 +419,8 @@ export async function registerRoutes(
 
   // Admin: Get all groups
   app.get("/api/admin/groups", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
@@ -427,8 +431,8 @@ export async function registerRoutes(
 
   // Admin: Get pending groups
   app.get("/api/admin/groups/pending", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
@@ -439,8 +443,8 @@ export async function registerRoutes(
 
   // Admin: Update group
   app.patch("/api/admin/groups/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
@@ -457,8 +461,8 @@ export async function registerRoutes(
 
   // Admin: Approve group
   app.post("/api/admin/groups/:id/approve", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
@@ -477,8 +481,8 @@ export async function registerRoutes(
 
   // Admin: Deny group
   app.post("/api/admin/groups/:id/deny", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
@@ -502,8 +506,8 @@ export async function registerRoutes(
 
   // Admin: Delete group
   app.delete("/api/admin/groups/:id", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    const userId = (req.user as any).claims.sub;
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
     const myProfile = await storage.getProfileByUserId(userId);
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });

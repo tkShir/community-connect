@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import dotenv from "dotenv";
+import { setupAuth0 } from "./auth0";
 dotenv.config();
 
 const app = express();
@@ -23,6 +24,9 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Auth0 Express integration (adds /login, /logout, /callback and session handling)
+setupAuth0(app);
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {

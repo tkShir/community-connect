@@ -248,7 +248,7 @@ export default function Landing() {
           A private network for professionals seeking meaningful connections.
         </p>
 
-        <a href="/api/login" data-testid="button-login">
+        <a href="/login" data-testid="button-login">
           <Button
             size="lg"
             className="h-12 px-10 text-lg"
