@@ -19,6 +19,7 @@ import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDel
 import type { Group } from "@shared/schema";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
+import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey } from "@/lib/profile-options";
 
 export default function Admin() {
   useLocale();
@@ -146,7 +147,7 @@ export default function Admin() {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {profile.profession.join(", ")} · {profile.ageRange}
+                          {translateOptionKeys(profile.profession).join(", ")} · {translateOptionKey(profile.ageRange)}
                         </p>
                       </div>
                     </div>
@@ -211,25 +212,13 @@ function EditProfileForm({
   useLocale();
   const [alias, setAlias] = useState(profile.alias);
   const [bio, setBio] = useState(profile.bio);
-  const [ageRange, setAgeRange] = useState(profile.ageRange);
+  const [ageRange, setAgeRange] = useState(migrateToKey(profile.ageRange));
   const [isAdmin, setIsAdmin] = useState(profile.isAdmin);
-  const [contactMethod, setContactMethod] = useState(profile.contactMethod);
+  const [contactMethod, setContactMethod] = useState(migrateToKey(profile.contactMethod));
   const [contactValue, setContactValue] = useState(profile.contactValue);
 
-  const ageRanges = [
-    t("onboarding.age_below_18"),
-    t("onboarding.age_18_22"),
-    t("onboarding.age_23_26"),
-    t("onboarding.age_27_30"),
-    t("onboarding.age_30_34"),
-    t("onboarding.age_above_34"),
-  ];
-
-  const contactMethods = [
-    t("onboarding.phone"),
-    t("onboarding.email"),
-    t("onboarding.line"),
-  ];
+  const ageRangeOptions = buildOptions(AGE_RANGE_KEYS);
+  const contactMethodOptions = buildOptions(CONTACT_METHOD_KEYS);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -268,9 +257,9 @@ function EditProfileForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {ageRanges.map((range) => (
-                <SelectItem key={range} value={range}>
-                  {range}
+              {ageRangeOptions.map((opt) => (
+                <SelectItem key={opt.key} value={opt.key}>
+                  {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -299,9 +288,9 @@ function EditProfileForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {contactMethods.map((method) => (
-                <SelectItem key={method} value={method}>
-                  {method}
+              {contactMethodOptions.map((opt) => (
+                <SelectItem key={opt.key} value={opt.key}>
+                  {opt.label}
                 </SelectItem>
               ))}
             </SelectContent>
