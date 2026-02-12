@@ -17,8 +17,11 @@ import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
 import type { Group } from "@shared/schema";
+import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 export default function Admin() {
+  useLocale();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
@@ -35,10 +38,10 @@ export default function Admin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/profiles"] });
       setEditingProfile(null);
-      toast({ title: "Profile updated successfully" });
+      toast({ title: t("admin.profile_updated") });
     },
     onError: () => {
-      toast({ title: "Failed to update profile", variant: "destructive" });
+      toast({ title: t("admin.profile_update_failed"), variant: "destructive" });
     },
   });
 
@@ -48,7 +51,7 @@ export default function Admin() {
         <header>
           <h1 className="text-4xl font-display font-bold text-foreground flex items-center gap-3">
             <Shield className="w-10 h-10 text-primary" />
-            Admin Dashboard
+            {t("admin.admin_dashboard")}
           </h1>
         </header>
         {[1, 2, 3, 4].map((i) => (
@@ -62,8 +65,8 @@ export default function Admin() {
     return (
       <div className="flex flex-col items-center justify-center h-[50vh] text-center">
         <Shield className="w-16 h-16 text-destructive mb-4" />
-        <h2 className="text-2xl font-display font-bold mb-2">Access Denied</h2>
-        <p className="text-muted-foreground">You don't have permission to access this page.</p>
+        <h2 className="text-2xl font-display font-bold mb-2">{t("admin.access_denied")}</h2>
+        <p className="text-muted-foreground">{t("admin.no_permission")}</p>
       </div>
     );
   }
@@ -79,10 +82,10 @@ export default function Admin() {
       <header>
         <h1 className="text-4xl font-display font-bold text-foreground flex items-center gap-3">
           <Shield className="w-10 h-10 text-primary" />
-          Admin Dashboard
+          {t("admin.admin_dashboard")}
         </h1>
         <p className="text-muted-foreground mt-2">
-          Manage users and events on the platform
+          {t("admin.manage_platform")}
         </p>
       </header>
 
@@ -90,15 +93,15 @@ export default function Admin() {
         <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
-            Users ({profiles?.length || 0})
+            {t("admin.users_count", { count: profiles?.length || 0 })}
           </TabsTrigger>
           <TabsTrigger value="events" data-testid="tab-admin-events">
             <Calendar className="w-4 h-4 mr-2" />
-            Events
+            {t("admin.events")}
           </TabsTrigger>
           <TabsTrigger value="groups" data-testid="tab-admin-groups">
             <UsersRound className="w-4 h-4 mr-2" />
-            Groups
+            {t("admin.groups")}
           </TabsTrigger>
         </TabsList>
 
@@ -106,7 +109,7 @@ export default function Admin() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
-              placeholder="Search by alias or profession..."
+              placeholder={t("admin.search_placeholder")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-card border-white/10"
@@ -138,15 +141,12 @@ export default function Admin() {
                           <h3 className="font-semibold text-lg">{profile.alias}</h3>
                           {profile.isAdmin && (
                             <Badge variant="default" className="bg-primary text-primary-foreground">
-                              Admin
+                              {t("admin.admin")}
                             </Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
                           {profile.profession.join(", ")} · {profile.ageRange}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Goals: {profile.goal.join(", ")}
                         </p>
                       </div>
                     </div>
@@ -181,7 +181,7 @@ export default function Admin() {
 
             {filteredProfiles?.length === 0 && (
               <div className="text-center py-10 text-muted-foreground">
-                No users found matching "{searchTerm}"
+                {t("admin.no_users_found", { searchTerm })}
               </div>
             )}
           </div>
@@ -208,12 +208,28 @@ function EditProfileForm({
   onSave: (updates: Partial<Profile>) => void;
   isPending: boolean;
 }) {
+  useLocale();
   const [alias, setAlias] = useState(profile.alias);
   const [bio, setBio] = useState(profile.bio);
   const [ageRange, setAgeRange] = useState(profile.ageRange);
   const [isAdmin, setIsAdmin] = useState(profile.isAdmin);
   const [contactMethod, setContactMethod] = useState(profile.contactMethod);
   const [contactValue, setContactValue] = useState(profile.contactValue);
+
+  const ageRanges = [
+    t("onboarding.age_below_18"),
+    t("onboarding.age_18_22"),
+    t("onboarding.age_23_26"),
+    t("onboarding.age_27_30"),
+    t("onboarding.age_30_34"),
+    t("onboarding.age_above_34"),
+  ];
+
+  const contactMethods = [
+    t("onboarding.phone"),
+    t("onboarding.email"),
+    t("onboarding.line"),
+  ];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,7 +239,7 @@ function EditProfileForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="alias">Alias</Label>
+        <Label htmlFor="alias">{t("admin.alias")}</Label>
         <Input
           id="alias"
           value={alias}
@@ -234,7 +250,7 @@ function EditProfileForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bio">Bio</Label>
+        <Label htmlFor="bio">{t("admin.bio")}</Label>
         <Input
           id="bio"
           value={bio}
@@ -246,13 +262,13 @@ function EditProfileForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="ageRange">Age Range</Label>
+          <Label htmlFor="ageRange">{t("admin.age_range")}</Label>
           <Select value={ageRange} onValueChange={setAgeRange}>
             <SelectTrigger className="bg-background border-white/10" data-testid="select-edit-age">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["18歳未満", "18〜22歳", "23〜26歳", "27〜30歳", "30〜34歳", "35歳以上"].map((range) => (
+              {ageRanges.map((range) => (
                 <SelectItem key={range} value={range}>
                   {range}
                 </SelectItem>
@@ -262,14 +278,14 @@ function EditProfileForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="isAdmin">Admin Status</Label>
+          <Label htmlFor="isAdmin">{t("admin.admin_status")}</Label>
           <Select value={isAdmin ? "true" : "false"} onValueChange={(v) => setIsAdmin(v === "true")}>
             <SelectTrigger className="bg-background border-white/10" data-testid="select-edit-admin">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="false">Regular User</SelectItem>
-              <SelectItem value="true">Admin</SelectItem>
+              <SelectItem value="false">{t("admin.regular_user")}</SelectItem>
+              <SelectItem value="true">{t("admin.admin")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -277,13 +293,13 @@ function EditProfileForm({
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="contactMethod">Contact Method</Label>
+          <Label htmlFor="contactMethod">{t("admin.contact_method")}</Label>
           <Select value={contactMethod} onValueChange={setContactMethod}>
             <SelectTrigger className="bg-background border-white/10" data-testid="select-edit-contact-method">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {["電話", "メール", "LINE"].map((method) => (
+              {contactMethods.map((method) => (
                 <SelectItem key={method} value={method}>
                   {method}
                 </SelectItem>
@@ -293,7 +309,7 @@ function EditProfileForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="contactValue">Contact Info</Label>
+          <Label htmlFor="contactValue">{t("admin.contact_info")}</Label>
           <Input
             id="contactValue"
             value={contactValue}
@@ -310,13 +326,14 @@ function EditProfileForm({
         disabled={isPending}
         data-testid="button-save-profile"
       >
-        {isPending ? "Saving..." : "Save Changes"}
+        {isPending ? t("admin.saving") : t("admin.save_changes")}
       </Button>
     </form>
   );
 }
 
 function EventsManagement() {
+  useLocale();
   const { toast } = useToast();
   const { data: allEvents, isLoading } = useAdminEvents();
   const { data: pendingEvents } = usePendingEvents();
@@ -324,7 +341,7 @@ function EventsManagement() {
   const { mutate: denyEvent, isPending: isDenying } = useDenyEvent();
   const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
   const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
-  
+
   const [denyDialogOpen, setDenyDialogOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [denyReason, setDenyReason] = useState("");
@@ -340,8 +357,8 @@ function EventsManagement() {
 
   const handleApprove = (id: number) => {
     approveEvent(id, {
-      onSuccess: () => toast({ title: "Event approved and published!" }),
-      onError: () => toast({ title: "Failed to approve event", variant: "destructive" }),
+      onSuccess: () => toast({ title: t("admin.event_approved") }),
+      onError: () => toast({ title: t("admin.event_approve_failed"), variant: "destructive" }),
     });
   };
 
@@ -357,20 +374,20 @@ function EventsManagement() {
       { id: selectedEventId, reason: denyReason },
       {
         onSuccess: () => {
-          toast({ title: "Event denied and user notified" });
+          toast({ title: t("admin.event_denied") });
           setDenyDialogOpen(false);
           setSelectedEventId(null);
           setDenyReason("");
         },
-        onError: () => toast({ title: "Failed to deny event", variant: "destructive" }),
+        onError: () => toast({ title: t("admin.event_deny_failed"), variant: "destructive" }),
       }
     );
   };
 
   const handleDelete = (id: number) => {
     deleteEvent(id, {
-      onSuccess: () => toast({ title: "Event deleted" }),
-      onError: () => toast({ title: "Failed to delete event", variant: "destructive" }),
+      onSuccess: () => toast({ title: t("admin.event_deleted") }),
+      onError: () => toast({ title: t("admin.event_delete_failed"), variant: "destructive" }),
     });
   };
 
@@ -384,11 +401,11 @@ function EventsManagement() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Event created and published!" });
+          toast({ title: t("admin.event_created") });
           setCreateDialogOpen(false);
           setNewEvent({ title: "", description: "", eventDate: "", eventTime: "", location: "", schedule: "" });
         },
-        onError: () => toast({ title: "Failed to create event", variant: "destructive" }),
+        onError: () => toast({ title: t("admin.event_create_failed"), variant: "destructive" }),
       }
     );
   };
@@ -396,11 +413,11 @@ function EventsManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "published":
-        return <Badge className="bg-green-600 text-white">Published</Badge>;
+        return <Badge className="bg-green-600 text-white">{t("events.published")}</Badge>;
       case "pending_approval":
-        return <Badge className="bg-yellow-600 text-white">Pending</Badge>;
+        return <Badge className="bg-yellow-600 text-white">{t("events.pending_approval")}</Badge>;
       case "denied":
-        return <Badge variant="destructive">Denied</Badge>;
+        return <Badge variant="destructive">{t("events.denied")}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -428,45 +445,45 @@ function EventsManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Events Management</h2>
+          <h2 className="text-xl font-semibold">{t("admin.events_management")}</h2>
           <p className="text-sm text-muted-foreground">
-            {pendingEvents?.length || 0} pending approval · {allEvents?.length || 0} total events
+            {t("admin.events_summary", { total: allEvents?.length || 0 })}
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-admin-create-event">
               <Plus className="w-4 h-4 mr-2" />
-              Create Event
+              {t("admin.create_event")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Create New Event</DialogTitle>
-              <DialogDescription>Admin-created events are published immediately.</DialogDescription>
+              <DialogTitle>{t("admin.create_new_event")}</DialogTitle>
+              <DialogDescription>{t("admin.admin_events_note")}</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateEvent} className="space-y-4">
               <div className="space-y-2">
-                <Label>Title</Label>
+                <Label>{t("admin.title")}</Label>
                 <Input
                   value={newEvent.title}
                   onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                  placeholder="Event title"
+                  placeholder={t("admin.event_title")}
                   data-testid="input-admin-event-title"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t("events.description")}</Label>
                 <Textarea
                   value={newEvent.description}
                   onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                  placeholder="Event description"
+                  placeholder={t("admin.event_description")}
                   data-testid="input-admin-event-description"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Date</Label>
+                  <Label>{t("events.date")}</Label>
                   <Input
                     type="date"
                     value={newEvent.eventDate}
@@ -475,7 +492,7 @@ function EventsManagement() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Time</Label>
+                  <Label>{t("events.time")}</Label>
                   <Input
                     type="time"
                     value={newEvent.eventTime}
@@ -485,26 +502,26 @@ function EventsManagement() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Location</Label>
+                <Label>{t("events.location")}</Label>
                 <Input
                   value={newEvent.location}
                   onChange={(e) => setNewEvent({ ...newEvent, location: e.target.value })}
-                  placeholder="Event location"
+                  placeholder={t("admin.event_location")}
                   data-testid="input-admin-event-location"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Schedule (Optional)</Label>
+                <Label>{t("events.schedule_optional")}</Label>
                 <Textarea
                   value={newEvent.schedule}
                   onChange={(e) => setNewEvent({ ...newEvent, schedule: e.target.value })}
-                  placeholder="Event schedule"
+                  placeholder={t("admin.event_schedule")}
                   data-testid="input-admin-event-schedule"
                 />
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isCreating} data-testid="button-admin-submit-event">
-                  {isCreating ? "Creating..." : "Create & Publish"}
+                  {isCreating ? t("admin.creating") : t("admin.create_and_publish")}
                 </Button>
               </DialogFooter>
             </form>
@@ -516,7 +533,7 @@ function EventsManagement() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium flex items-center gap-2">
             <Clock className="w-5 h-5 text-yellow-500" />
-            Pending Approval ({pendingEvents.length})
+            {t("admin.pending_approval_count", { count: pendingEvents.length })}
           </h3>
           {pendingEvents.map((event) => (
             <Card key={event.id} className="bg-yellow-500/5 border-yellow-500/20" data-testid={`card-pending-event-${event.id}`}>
@@ -548,7 +565,7 @@ function EventsManagement() {
                       data-testid={`button-approve-${event.id}`}
                     >
                       <Check className="w-4 h-4 mr-1" />
-                      Approve
+                      {t("admin.approve")}
                     </Button>
                     <Button
                       size="sm"
@@ -558,7 +575,7 @@ function EventsManagement() {
                       data-testid={`button-deny-${event.id}`}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
-                      Deny
+                      {t("admin.deny")}
                     </Button>
                   </div>
                 </div>
@@ -569,10 +586,10 @@ function EventsManagement() {
       )}
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">All Events</h3>
+        <h3 className="text-lg font-medium">{t("admin.all_events")}</h3>
         {allEvents?.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground">
-            No events yet. Create one to get started.
+            {t("admin.no_events_message")}
           </div>
         ) : (
           allEvents?.map((event) => (
@@ -584,7 +601,7 @@ function EventsManagement() {
                       <h4 className="font-semibold">{event.title}</h4>
                       {getStatusBadge(event.status)}
                       {event.createdByAdmin && (
-                        <Badge variant="outline" className="text-xs">Admin Created</Badge>
+                        <Badge variant="outline" className="text-xs">{t("admin.admin_created")}</Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{event.description}</p>
@@ -600,7 +617,7 @@ function EventsManagement() {
                       </span>
                     </div>
                     {event.status === "denied" && event.denialReason && (
-                      <p className="text-xs text-destructive mt-2">Denial reason: {event.denialReason}</p>
+                      <p className="text-xs text-destructive mt-2">{t("admin.denial_reason_display", { reason: event.denialReason })}</p>
                     )}
                   </div>
                   <Button
@@ -623,21 +640,19 @@ function EventsManagement() {
       <Dialog open={denyDialogOpen} onOpenChange={setDenyDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Deny Event</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for denying this event. The user will be notified.
-            </DialogDescription>
+            <DialogTitle>{t("admin.deny_event")}</DialogTitle>
+            <DialogDescription>{t("admin.deny_event_prompt")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Textarea
               value={denyReason}
               onChange={(e) => setDenyReason(e.target.value)}
-              placeholder="Reason for denial..."
+              placeholder={t("admin.denial_reason_placeholder")}
               data-testid="input-deny-reason"
             />
             <DialogFooter>
               <Button variant="outline" onClick={() => setDenyDialogOpen(false)}>
-                Cancel
+                {t("admin.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -645,7 +660,7 @@ function EventsManagement() {
                 disabled={!denyReason.trim() || isDenying}
                 data-testid="button-confirm-deny"
               >
-                {isDenying ? "Denying..." : "Confirm Denial"}
+                {isDenying ? t("admin.denying") : t("admin.confirm_denial")}
               </Button>
             </DialogFooter>
           </div>
@@ -656,6 +671,7 @@ function EventsManagement() {
 }
 
 function GroupsManagement() {
+  useLocale();
   const { toast } = useToast();
   const { data: allGroups, isLoading } = useAdminGroups();
   const { data: pendingGroups } = usePendingGroups();
@@ -678,8 +694,8 @@ function GroupsManagement() {
 
   const handleApprove = (id: number) => {
     approveGroup(id, {
-      onSuccess: () => toast({ title: "Group approved and published!" }),
-      onError: () => toast({ title: "Failed to approve group", variant: "destructive" }),
+      onSuccess: () => toast({ title: t("admin.group_approved") }),
+      onError: () => toast({ title: t("admin.group_approve_failed"), variant: "destructive" }),
     });
   };
 
@@ -695,20 +711,20 @@ function GroupsManagement() {
       { id: selectedGroupId, reason: denyReason },
       {
         onSuccess: () => {
-          toast({ title: "Group denied and user notified" });
+          toast({ title: t("admin.group_denied") });
           setDenyDialogOpen(false);
           setSelectedGroupId(null);
           setDenyReason("");
         },
-        onError: () => toast({ title: "Failed to deny group", variant: "destructive" }),
+        onError: () => toast({ title: t("admin.group_deny_failed"), variant: "destructive" }),
       }
     );
   };
 
   const handleDelete = (id: number) => {
     deleteGroup(id, {
-      onSuccess: () => toast({ title: "Group deleted" }),
-      onError: () => toast({ title: "Failed to delete group", variant: "destructive" }),
+      onSuccess: () => toast({ title: t("admin.group_deleted") }),
+      onError: () => toast({ title: t("admin.group_delete_failed"), variant: "destructive" }),
     });
   };
 
@@ -721,11 +737,11 @@ function GroupsManagement() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Group created and published!" });
+          toast({ title: t("admin.group_created") });
           setCreateDialogOpen(false);
           setNewGroup({ title: "", description: "", lineGroupLink: "" });
         },
-        onError: () => toast({ title: "Failed to create group", variant: "destructive" }),
+        onError: () => toast({ title: t("admin.group_create_failed"), variant: "destructive" }),
       }
     );
   };
@@ -743,10 +759,10 @@ function GroupsManagement() {
       },
       {
         onSuccess: () => {
-          toast({ title: "Group updated!" });
+          toast({ title: t("admin.group_updated") });
           setEditingGroup(null);
         },
-        onError: () => toast({ title: "Failed to update group", variant: "destructive" }),
+        onError: () => toast({ title: t("admin.group_update_failed"), variant: "destructive" }),
       }
     );
   };
@@ -754,11 +770,11 @@ function GroupsManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "published":
-        return <Badge className="bg-green-600 text-white">Published</Badge>;
+        return <Badge className="bg-green-600 text-white">{t("groups.published")}</Badge>;
       case "pending_approval":
-        return <Badge className="bg-yellow-600 text-white">Pending</Badge>;
+        return <Badge className="bg-yellow-600 text-white">{t("groups.pending_approval")}</Badge>;
       case "denied":
-        return <Badge variant="destructive">Denied</Badge>;
+        return <Badge variant="destructive">{t("groups.denied")}</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -778,54 +794,54 @@ function GroupsManagement() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-semibold">Groups Management</h2>
+          <h2 className="text-xl font-semibold">{t("admin.groups_management")}</h2>
           <p className="text-sm text-muted-foreground">
-            {pendingGroups?.length || 0} pending approval · {allGroups?.length || 0} total groups
+            {t("admin.groups_summary", { pending: pendingGroups?.length || 0, total: allGroups?.length || 0 })}
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-admin-create-group">
               <Plus className="w-4 h-4 mr-2" />
-              Create Group
+              {t("admin.create_group")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
-              <DialogTitle>Create New Group</DialogTitle>
-              <DialogDescription>Admin-created groups are published immediately.</DialogDescription>
+              <DialogTitle>{t("admin.create_new_group")}</DialogTitle>
+              <DialogDescription>{t("admin.admin_groups_note")}</DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateGroup} className="space-y-4">
               <div className="space-y-2">
-                <Label>Title</Label>
+                <Label>{t("admin.title")}</Label>
                 <Input
                   value={newGroup.title}
                   onChange={(e) => setNewGroup({ ...newGroup, title: e.target.value })}
-                  placeholder="Group name"
+                  placeholder={t("admin.group_name")}
                   data-testid="input-admin-group-title"
                 />
               </div>
               <div className="space-y-2">
-                <Label>Description</Label>
+                <Label>{t("groups.description")}</Label>
                 <Textarea
                   value={newGroup.description}
                   onChange={(e) => setNewGroup({ ...newGroup, description: e.target.value })}
-                  placeholder="Brief description of the group"
+                  placeholder={t("admin.group_description")}
                   data-testid="input-admin-group-description"
                 />
               </div>
               <div className="space-y-2">
-                <Label>LINE Group Link</Label>
+                <Label>{t("admin.line_group_link")}</Label>
                 <Input
                   value={newGroup.lineGroupLink}
                   onChange={(e) => setNewGroup({ ...newGroup, lineGroupLink: e.target.value })}
-                  placeholder="https://line.me/ti/g/..."
+                  placeholder={t("admin.line_link_placeholder")}
                   data-testid="input-admin-group-link"
                 />
               </div>
               <DialogFooter>
                 <Button type="submit" disabled={isCreating} data-testid="button-admin-submit-group">
-                  {isCreating ? "Creating..." : "Create & Publish"}
+                  {isCreating ? t("admin.creating") : t("admin.create_and_publish")}
                 </Button>
               </DialogFooter>
             </form>
@@ -837,7 +853,7 @@ function GroupsManagement() {
         <div className="space-y-4">
           <h3 className="text-lg font-medium flex items-center gap-2">
             <Clock className="w-5 h-5 text-yellow-500" />
-            Pending Approval ({pendingGroups.length})
+            {t("admin.pending_approval_count", { count: pendingGroups.length })}
           </h3>
           {pendingGroups.map((group) => (
             <Card key={group.id} className="bg-yellow-500/5 border-yellow-500/20" data-testid={`card-pending-group-${group.id}`}>
@@ -858,7 +874,7 @@ function GroupsManagement() {
                       data-testid={`button-approve-group-${group.id}`}
                     >
                       <Check className="w-4 h-4 mr-1" />
-                      Approve
+                      {t("admin.approve")}
                     </Button>
                     <Button
                       size="sm"
@@ -868,7 +884,7 @@ function GroupsManagement() {
                       data-testid={`button-deny-group-${group.id}`}
                     >
                       <XCircle className="w-4 h-4 mr-1" />
-                      Deny
+                      {t("admin.deny")}
                     </Button>
                   </div>
                 </div>
@@ -879,10 +895,10 @@ function GroupsManagement() {
       )}
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium">All Groups</h3>
+        <h3 className="text-lg font-medium">{t("admin.all_groups")}</h3>
         {allGroups?.length === 0 ? (
           <div className="text-center py-10 text-muted-foreground">
-            No groups yet. Create one to get started.
+            {t("admin.no_groups_message")}
           </div>
         ) : (
           allGroups?.map((group) => (
@@ -894,7 +910,7 @@ function GroupsManagement() {
                       <h4 className="font-semibold">{group.title}</h4>
                       {getStatusBadge(group.status)}
                       {group.createdByAdmin && (
-                        <Badge variant="outline" className="text-xs">Admin Created</Badge>
+                        <Badge variant="outline" className="text-xs">{t("admin.admin_created")}</Badge>
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">{group.description}</p>
@@ -905,7 +921,7 @@ function GroupsManagement() {
                       </div>
                     )}
                     {group.status === "denied" && group.denialReason && (
-                      <p className="text-xs text-destructive mt-2">Denial reason: {group.denialReason}</p>
+                      <p className="text-xs text-destructive mt-2">{t("admin.denial_reason_group_display", { reason: group.denialReason })}</p>
                     )}
                   </div>
                   <div className="flex gap-2">
@@ -922,12 +938,12 @@ function GroupsManagement() {
                       </DialogTrigger>
                       <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
-                          <DialogTitle>Edit Group</DialogTitle>
+                          <DialogTitle>{t("admin.edit_group")}</DialogTitle>
                         </DialogHeader>
                         {editingGroup && (
                           <div className="space-y-4">
                             <div className="space-y-2">
-                              <Label>Title</Label>
+                              <Label>{t("admin.title")}</Label>
                               <Input
                                 value={editingGroup.title}
                                 onChange={(e) => setEditingGroup({ ...editingGroup, title: e.target.value })}
@@ -935,7 +951,7 @@ function GroupsManagement() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Description</Label>
+                              <Label>{t("groups.description")}</Label>
                               <Textarea
                                 value={editingGroup.description}
                                 onChange={(e) => setEditingGroup({ ...editingGroup, description: e.target.value })}
@@ -943,20 +959,20 @@ function GroupsManagement() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>LINE Group Link</Label>
+                              <Label>{t("admin.line_group_link")}</Label>
                               <Input
                                 value={editingGroup.lineGroupLink || ""}
                                 onChange={(e) => setEditingGroup({ ...editingGroup, lineGroupLink: e.target.value })}
-                                placeholder="https://line.me/ti/g/..."
+                                placeholder={t("admin.line_link_placeholder")}
                                 data-testid="input-edit-group-link"
                               />
                             </div>
                             <DialogFooter>
                               <Button variant="outline" onClick={() => setEditingGroup(null)}>
-                                Cancel
+                                {t("admin.cancel")}
                               </Button>
                               <Button onClick={handleEditSave} disabled={isUpdating} data-testid="button-save-group">
-                                {isUpdating ? "Saving..." : "Save Changes"}
+                                {isUpdating ? t("admin.saving") : t("admin.save_changes")}
                               </Button>
                             </DialogFooter>
                           </div>
@@ -984,21 +1000,19 @@ function GroupsManagement() {
       <Dialog open={denyDialogOpen} onOpenChange={setDenyDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Deny Group</DialogTitle>
-            <DialogDescription>
-              Please provide a reason for denying this group. The user will be notified.
-            </DialogDescription>
+            <DialogTitle>{t("admin.deny_group")}</DialogTitle>
+            <DialogDescription>{t("admin.deny_group_prompt")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Textarea
               value={denyReason}
               onChange={(e) => setDenyReason(e.target.value)}
-              placeholder="Reason for denial..."
+              placeholder={t("admin.denial_reason_placeholder")}
               data-testid="input-deny-group-reason"
             />
             <DialogFooter>
               <Button variant="outline" onClick={() => setDenyDialogOpen(false)}>
-                Cancel
+                {t("admin.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -1006,7 +1020,7 @@ function GroupsManagement() {
                 disabled={!denyReason.trim() || isDenying}
                 data-testid="button-confirm-deny-group"
               >
-                {isDenying ? "Denying..." : "Confirm Denial"}
+                {isDenying ? t("admin.denying_group") : t("admin.confirm_denial_group")}
               </Button>
             </DialogFooter>
           </div>

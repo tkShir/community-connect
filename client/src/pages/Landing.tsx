@@ -14,11 +14,14 @@ import { Loader2, Lock, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 const ACCESS_CODE = "testtest";
 const SESSION_KEY = "onyx_access_granted";
 
 export default function Landing() {
+  useLocale();
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const [accessGranted, setAccessGranted] = useState(() => {
@@ -52,12 +55,12 @@ export default function Landing() {
     setError("");
 
     if (codeInput.trim().toLowerCase() !== ACCESS_CODE) {
-      setError("Invalid access code. Please try again.");
+      setError(t("landing.invalid_access_code"));
       return;
     }
 
     if (!termsAccepted) {
-      setError("You must accept the Terms of Use to continue.");
+      setError(t("landing.must_accept_terms"));
       return;
     }
 
@@ -69,22 +72,22 @@ export default function Landing() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center space-y-8 max-w-md w-full">
+          <div className="flex justify-end">
+            <LanguageSwitcher />
+          </div>
           <div className="space-y-4">
             <h1 className="text-4xl font-display font-bold text-primary tracking-tighter">
               ONYX
             </h1>
             <p className="text-sm text-muted-foreground uppercase tracking-widest">
-              {t("client/src/pages/Landing.tsx", "Exclusive Community")}
+              {t("landing.exclusive_community")}
             </p>
           </div>
 
           <div className="w-16 h-px bg-primary/30 mx-auto" />
 
           <p className="text-muted-foreground leading-relaxed">
-            {t(
-              "client/src/pages/Landing.tsx",
-              "This is a private, invite-only platform. Enter your access code to continue."
-            )}
+            {t("landing.private_invite_only")}
           </p>
 
           <Card>
@@ -95,7 +98,7 @@ export default function Landing() {
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="password"
-                      placeholder={t("client/src/pages/Landing.tsx", "Enter access code")}
+                      placeholder={t("landing.enter_access_code")}
                       value={codeInput}
                       onChange={(e) => {
                         setCodeInput(e.target.value);
@@ -121,14 +124,7 @@ export default function Landing() {
                     htmlFor="terms"
                     className="text-sm text-muted-foreground leading-relaxed cursor-pointer select-none"
                   >
-                    {t(
-                      "client/src/pages/Landing.tsx",
-                      "I agree to the Terms of Use and acknowledge that my participation in this community is subject to adherence to the community guidelines."
-                    ).replace(
-                      "利用規約",
-                      ""
-                    )}
-                    <span> </span>
+                    {t("landing.agree_to_terms_before")}
                     <span
                       className="text-primary font-medium underline underline-offset-2 cursor-pointer"
                       onClick={(e) => {
@@ -137,8 +133,9 @@ export default function Landing() {
                       }}
                       data-testid="link-terms"
                     >
-                      {t("client/src/pages/Landing.tsx", "Terms of Use")}
-                    </span>{" "}
+                      {t("landing.terms_of_use")}
+                    </span>
+                    {t("landing.agree_to_terms_after")}
                   </label>
                 </div>
 
@@ -146,110 +143,54 @@ export default function Landing() {
                   <DialogContent className="max-w-lg max-h-[80vh]">
                     <DialogHeader>
                       <DialogTitle className="font-display text-xl">
-                        {t("client/src/pages/Landing.tsx", "Terms of Use")}
+                        {t("landing.terms_of_use")}
                       </DialogTitle>
                     </DialogHeader>
                     <ScrollArea className="max-h-[60vh] pr-4">
                       <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
                         <p className="font-medium text-foreground">
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "ONYX Community Platform - Terms of Use"
-                          )}
+                          {t("landing.terms_title")}
                         </p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "1. Acceptance of Terms")}
+                          {t("landing.terms_acceptance")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "By accessing and using the ONYX platform, you agree to be bound by these Terms of Use. If you do not agree to these terms, you may not use the platform."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_acceptance_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "2. Eligibility")}
+                          {t("landing.terms_eligibility")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "ONYX is designed for professionals aged 18-35. By using this platform, you confirm that you meet the eligibility requirements and have received a valid access code through an authorized invitation."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_eligibility_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "3. Anonymous Profiles")}
+                          {t("landing.terms_anonymous_profiles")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "Users create profiles using aliases. Your real identity remains hidden until you choose to accept a connection. You agree not to misrepresent your professional background, interests, or intentions on the platform."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_anonymous_profiles_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "4. Community Conduct")}
+                          {t("landing.terms_community_conduct")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "You agree to engage respectfully with all community members. Harassment, discrimination, spam, solicitation, or any form of abusive behavior is strictly prohibited and may result in immediate removal from the platform."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_community_conduct_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "5. Connections & Contact Information"
-                          )}
+                          {t("landing.terms_connections")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "When you accept a connection, your chosen contact information (phone, email, or LINE) will be shared with the other party. You are responsible for the information you choose to share and how you use others' contact details."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_connections_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "6. Events & Groups")}
+                          {t("landing.terms_events_groups")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "Users may propose events and suggest interest groups, which are subject to admin approval. The platform reserves the right to approve, deny, or remove any user-submitted content at its discretion."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_events_groups_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "7. Privacy")}
+                          {t("landing.terms_privacy")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "We respect your privacy. Your personal data is used solely for the purpose of providing the platform's matching and community features. We do not sell or share your information with third parties."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_privacy_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "8. Account Termination")}
+                          {t("landing.terms_account_termination")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "ONYX reserves the right to suspend or terminate any account that violates these terms or community guidelines without prior notice."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_account_termination_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "9. Disclaimer")}
+                          {t("landing.terms_disclaimer")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            'The platform is provided "as is" without warranties of any kind. ONYX is not responsible for the outcomes of connections, events, or interactions facilitated through the platform.'
-                          )}
-                        </p>
+                        <p>{t("landing.terms_disclaimer_body")}</p>
                         <p className="font-medium text-foreground">
-                          {t("client/src/pages/Landing.tsx", "10. Changes to Terms")}
+                          {t("landing.terms_changes")}
                         </p>
-                        <p>
-                          {t(
-                            "client/src/pages/Landing.tsx",
-                            "These terms may be updated from time to time. Continued use of the platform after changes constitutes acceptance of the revised terms."
-                          )}
-                        </p>
+                        <p>{t("landing.terms_changes_body")}</p>
                       </div>
                     </ScrollArea>
                   </DialogContent>
@@ -267,7 +208,7 @@ export default function Landing() {
                   className="w-full"
                   data-testid="button-enter"
                 >
-                  {t("client/src/pages/Landing.tsx", "Enter")}
+                  {t("landing.enter")}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
               </form>
@@ -281,22 +222,22 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="text-center space-y-8 max-w-md">
+        <div className="flex justify-end">
+          <LanguageSwitcher />
+        </div>
         <div className="space-y-4">
           <h1 className="text-4xl font-display font-bold text-primary tracking-tighter">
             ONYX
           </h1>
           <p className="text-sm text-muted-foreground uppercase tracking-widest">
-            {t("client/src/pages/Landing.tsx", "Exclusive Community")}
+            {t("landing.exclusive_community")}
           </p>
         </div>
 
         <div className="w-16 h-px bg-primary/30 mx-auto" />
 
         <p className="text-muted-foreground leading-relaxed">
-          {t(
-            "client/src/pages/Landing.tsx",
-            "A private network for professionals seeking meaningful connections."
-          )}
+          {t("landing.tagline")}
         </p>
 
         <a href="/login" data-testid="button-login">
@@ -304,7 +245,7 @@ export default function Landing() {
             size="lg"
             className="h-12 px-10 text-lg"
           >
-            {t("client/src/pages/Landing.tsx", "Member Login")}
+            {t("landing.member_login")}
           </Button>
         </a>
       </div>

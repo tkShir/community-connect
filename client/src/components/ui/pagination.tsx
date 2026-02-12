@@ -65,7 +65,7 @@ const PaginationPrevious = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => (
   <PaginationLink
-    aria-label={t("client/src/components/ui/pagination.tsx", "Go to previous page")}
+    aria-label={t("pagination.previous_page")}
     size="default"
     className={cn("gap-1 pl-2.5", className)}
     {...props}
@@ -81,7 +81,7 @@ const PaginationNext = ({
   ...props
 }: React.ComponentProps<typeof PaginationLink>) => (
   <PaginationLink
-    aria-label={t("client/src/components/ui/pagination.tsx", "Go to next page")}
+    aria-label={t("pagination.next_page")}
     size="default"
     className={cn("gap-1 pr-2.5", className)}
     {...props}
@@ -103,7 +103,7 @@ const PaginationEllipsis = ({
   >
     <MoreHorizontal className="h-4 w-4" />
     <span className="sr-only">
-      {t("client/src/components/ui/pagination.tsx", "More pages")}
+      {t("pagination.more_pages")}
     </span>
   </span>
 )

@@ -26,8 +26,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  useLocale();
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { data: profile } = useMyProfile();
@@ -40,13 +43,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const unreadCount = notifications?.filter((n: any) => !n.isRead).length || 0;
 
   const navItems = [
-    { href: "/discover", label: t("client/src/components/Layout.tsx", "Discover"), icon: Compass },
-    { href: "/suggested", label: t("client/src/components/Layout.tsx", "Suggested"), icon: Lightbulb },
-    { href: "/connections", label: t("client/src/components/Layout.tsx", "Connections"), icon: Users },
-    { href: "/events", label: t("client/src/components/Layout.tsx", "Events"), icon: Calendar },
-    { href: "/groups", label: t("client/src/components/Layout.tsx", "Groups"), icon: UsersRound },
-    { href: "/profile", label: t("client/src/components/Layout.tsx", "My Profile"), icon: UserCircle },
-    ...(profile?.isAdmin ? [{ href: "/admin", label: t("client/src/components/Layout.tsx", "Admin"), icon: Shield }] : []),
+    { href: "/discover", label: t("layout.discover"), icon: Compass },
+    { href: "/suggested", label: t("layout.suggested"), icon: Lightbulb },
+    { href: "/connections", label: t("layout.connections"), icon: Users },
+    { href: "/events", label: t("layout.events"), icon: Calendar },
+    { href: "/groups", label: t("layout.groups"), icon: UsersRound },
+    { href: "/profile", label: t("layout.my_profile"), icon: UserCircle },
+    ...(profile?.isAdmin ? [{ href: "/admin", label: t("layout.admin"), icon: Shield }] : []),
   ];
 
   return (
@@ -54,6 +57,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="md:hidden flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur z-50 sticky top-0">
         <h1 className="text-xl font-display font-bold tracking-tighter text-primary">ONYX</h1>
         <div className="flex items-center gap-2">
+          <LanguageSwitcher />
           <NotificationBell
             notifications={notifications}
             unreadCount={unreadCount}
@@ -89,7 +93,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               className="flex items-center gap-4 p-4 rounded-xl text-lg font-medium text-destructive hover:bg-destructive/10 w-full transition-colors"
             >
               <LogOut className="w-6 h-6" />
-              Sign Out
+              {t("layout.sign_out")}
             </button>
           </div>
         </div>
@@ -100,14 +104,17 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <div>
             <h1 className="text-3xl font-display font-bold tracking-tighter text-primary">ONYX</h1>
             <p className="text-xs text-muted-foreground mt-1 uppercase tracking-widest font-medium">
-              {t("client/src/components/Layout.tsx", "Exclusive Community")}
+              {t("layout.exclusive_community")}
             </p>
           </div>
-          <NotificationBell
-            notifications={notifications}
-            unreadCount={unreadCount}
-            markRead={markRead}
-          />
+          <div className="flex items-center gap-1">
+            <LanguageSwitcher />
+            <NotificationBell
+              notifications={notifications}
+              unreadCount={unreadCount}
+              markRead={markRead}
+            />
+          </div>
         </div>
 
         <nav className="flex-1 space-y-2">
@@ -142,12 +149,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-semibold truncate">
-                  {profile?.alias || t("client/src/components/Layout.tsx", "Member")}
+                  {profile?.alias || t("layout.member")}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {Array.isArray(profile?.profession)
                     ? profile.profession.join(", ")
-                    : profile?.profession || t("client/src/components/Layout.tsx", "Set up profile")}
+                    : profile?.profession || t("layout.set_up_profile")}
                 </p>
               </div>
             </div>
@@ -158,7 +165,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             onClick={() => logout()}
           >
             <LogOut className="w-4 h-4 mr-2" />
-            {t("client/src/components/Layout.tsx", "Sign Out")}
+            {t("layout.sign_out")}
           </Button>
         </div>
       </aside>
@@ -194,7 +201,7 @@ function NotificationBell({
       <DropdownMenuContent align="end" className="w-80 max-h-96 overflow-y-auto">
         {!notifications || notifications.length === 0 ? (
           <div className="p-4 text-center text-muted-foreground text-sm">
-            {t("client/src/components/Layout.tsx", "No notifications")}
+            {t("layout.no_notifications")}
           </div>
         ) : (
           notifications.map((notif: any) => (

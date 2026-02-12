@@ -17,23 +17,25 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 const eventFormSchema = z.object({
   title: z
     .string()
-    .min(3, t("client/src/pages/Events.tsx", "Title must be at least 3 characters")),
+    .min(3, t("events.title_min_length")),
   description: z
     .string()
-    .min(1, t("client/src/pages/Events.tsx", "Description is required")),
-  eventDate: z.string().min(1, t("client/src/pages/Events.tsx", "Date is required")),
-  eventTime: z.string().min(1, t("client/src/pages/Events.tsx", "Time is required")),
-  location: z.string().min(1, t("client/src/pages/Events.tsx", "Location is required")),
+    .min(1, t("events.description_required")),
+  eventDate: z.string().min(1, t("events.date_required")),
+  eventTime: z.string().min(1, t("events.time_required")),
+  location: z.string().min(1, t("events.location_required")),
   schedule: z.string().optional(),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
 
 export default function Events() {
+  useLocale();
   const { data: publishedEvents, isLoading: loadingPublished } = usePublishedEvents();
   const { data: myEvents, isLoading: loadingMine } = useMyEvents();
   const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
@@ -62,21 +64,18 @@ export default function Events() {
       {
         onSuccess: () => {
           toast({
-            title: t("client/src/pages/Events.tsx", "Event submitted"),
-            description: t(
-              "client/src/pages/Events.tsx",
-              "Your event request has been submitted for review."
-            ),
+            title: t("events.event_submitted"),
+            description: t("events.event_submitted_description"),
           });
           form.reset();
           setIsDialogOpen(false);
         },
         onError: (error: any) => {
           toast({
-            title: t("client/src/pages/Events.tsx", "Error"),
+            title: t("events.error"),
             description:
               error.message ||
-              t("client/src/pages/Events.tsx", "Failed to submit event"),
+              t("events.failed_to_submit"),
             variant: "destructive",
           });
         },
@@ -89,19 +88,19 @@ export default function Events() {
       case "published":
         return (
           <Badge className="bg-green-600 text-white">
-            {t("client/src/pages/Events.tsx", "Published")}
+            {t("events.published")}
           </Badge>
         );
       case "pending_approval":
         return (
           <Badge className="bg-yellow-600 text-white">
-            {t("client/src/pages/Events.tsx", "Pending Approval")}
+            {t("events.pending_approval")}
           </Badge>
         );
       case "denied":
         return (
           <Badge variant="destructive">
-            {t("client/src/pages/Events.tsx", "Denied")}
+            {t("events.denied")}
           </Badge>
         );
       default:
@@ -133,32 +132,26 @@ export default function Events() {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold text-foreground">
-            {t("client/src/pages/Events.tsx", "Events")}
+            {t("events.events")}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {t(
-              "client/src/pages/Events.tsx",
-              "Discover and attend exclusive community events."
-            )}
+            {t("events.discover_events")}
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-propose-event">
               <Plus className="w-4 h-4 mr-2" />
-              Propose an Event
+              {t("events.propose_event")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
-                {t("client/src/pages/Events.tsx", "Propose a New Event")}
+                {t("events.propose_new_event")}
               </DialogTitle>
               <DialogDescription>
-                {t(
-                  "client/src/pages/Events.tsx",
-                  "Submit your event for admin approval. Once approved, it will be visible to all members."
-                )}
+                {t("events.submit_for_approval")}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -169,14 +162,11 @@ export default function Events() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Events.tsx", "Event Title")}
+                        {t("events.event_title")}
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t(
-                            "client/src/pages/Events.tsx",
-                            "e.g., Tech Networking Meetup"
-                          )}
+                          placeholder={t("events.event_title_placeholder")}
                           data-testid="input-event-title"
                           {...field}
                         />
@@ -191,14 +181,11 @@ export default function Events() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Events.tsx", "Description")}
+                        {t("events.description")}
                       </FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={t(
-                            "client/src/pages/Events.tsx",
-                            "Describe your event..."
-                          )}
+                          placeholder={t("events.description_placeholder")}
                           data-testid="input-event-description"
                           {...field}
                         />
@@ -213,7 +200,7 @@ export default function Events() {
                     name="eventDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("client/src/pages/Events.tsx", "Date")}</FormLabel>
+                        <FormLabel>{t("events.date")}</FormLabel>
                         <FormControl>
                           <Input type="date" data-testid="input-event-date" {...field} />
                         </FormControl>
@@ -226,7 +213,7 @@ export default function Events() {
                     name="eventTime"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>{t("client/src/pages/Events.tsx", "Time")}</FormLabel>
+                        <FormLabel>{t("events.time")}</FormLabel>
                         <FormControl>
                           <Input type="time" data-testid="input-event-time" {...field} />
                         </FormControl>
@@ -241,14 +228,11 @@ export default function Events() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Events.tsx", "Location")}
+                        {t("events.location")}
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t(
-                            "client/src/pages/Events.tsx",
-                            "e.g., Downtown Conference Center"
-                          )}
+                          placeholder={t("events.location_placeholder")}
                           data-testid="input-event-location"
                           {...field}
                         />
@@ -263,24 +247,18 @@ export default function Events() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Events.tsx", "Schedule (Optional)")}
+                        {t("events.schedule_optional")}
                       </FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={t(
-                            "client/src/pages/Events.tsx",
-                            "6:00 PM - Check-in"
-                          )
+                          placeholder={t("events.schedule_checkin")
                             .concat("\n")
                             .concat(
-                              t(
-                                "client/src/pages/Events.tsx",
-                                "6:30 PM - Networking"
-                              )
+                              t("events.schedule_networking")
                             )
                             .concat("\n")
                             .concat(
-                              t("client/src/pages/Events.tsx", "7:00 PM - Speaker")
+                              t("events.schedule_speaker")
                             )}
                           data-testid="input-event-schedule"
                           {...field}
@@ -297,8 +275,8 @@ export default function Events() {
                     data-testid="button-submit-event"
                   >
                     {isCreating
-                      ? t("client/src/pages/Events.tsx", "Submitting...")
-                      : t("client/src/pages/Events.tsx", "Submit for Review")}
+                      ? t("events.submitting")
+                      : t("events.submit_for_review")}
                     {!isCreating && <Send className="w-4 h-4 ml-2" />}
                   </Button>
                 </DialogFooter>
@@ -312,11 +290,11 @@ export default function Events() {
         <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
           <TabsTrigger value="upcoming" data-testid="tab-upcoming-events">
             <CalendarCheck className="w-4 h-4 mr-2" />
-            Upcoming Events
+            {t("events.upcoming_events")}
           </TabsTrigger>
           <TabsTrigger value="my-events" data-testid="tab-my-events">
             <Calendar className="w-4 h-4 mr-2" />
-            My Submissions
+            {t("events.my_submissions")}
           </TabsTrigger>
         </TabsList>
 
@@ -326,13 +304,13 @@ export default function Events() {
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
                 <Calendar className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-display font-bold mb-2">No events yet</h2>
+              <h2 className="text-2xl font-display font-bold mb-2">{t("events.no_events")}</h2>
               <p className="text-muted-foreground max-w-md mb-6">
-                Be the first to propose an event for the community!
+                {t("events.be_first_to_propose")}
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Propose an Event
+                {t("events.propose_event")}
               </Button>
             </div>
           ) : (
@@ -371,7 +349,7 @@ export default function Events() {
                         </div>
                         {event.schedule && (
                           <div className="bg-secondary/30 p-4 rounded-lg">
-                            <p className="text-sm font-medium mb-2">Schedule</p>
+                            <p className="text-sm font-medium mb-2">{t("events.schedule")}</p>
                             <pre className="text-sm text-muted-foreground whitespace-pre-wrap">{event.schedule}</pre>
                           </div>
                         )}
@@ -395,13 +373,13 @@ export default function Events() {
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
                 <Send className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-display font-bold mb-2">No submissions yet</h2>
+              <h2 className="text-2xl font-display font-bold mb-2">{t("events.no_submissions")}</h2>
               <p className="text-muted-foreground max-w-md mb-6">
-                You haven't proposed any events. Start by creating one!
+                {t("events.no_submissions_message")}
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Propose an Event
+                {t("events.propose_event")}
               </Button>
             </div>
           ) : (
@@ -443,7 +421,7 @@ export default function Events() {
                           <div className="bg-destructive/10 p-4 rounded-lg flex items-start gap-3">
                             <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-destructive">Denial Reason</p>
+                              <p className="text-sm font-medium text-destructive">{t("events.denial_reason")}</p>
                               <p className="text-sm text-muted-foreground">{event.denialReason}</p>
                             </div>
                           </div>

@@ -15,80 +15,87 @@ import { useLocation } from "wouter";
 import { useEffect } from "react";
 import { z } from "zod";
 import { t } from "@/lib/i18n";
-
-const PROFESSIONS = [
-  "テクノロジー",
-  "金融",
-  "コンサルティング",
-  "医療・ヘルスケア",
-  "教育",
-  "アート",
-  "エンジニアリング",
-  "法律",
-  "マーケティング",
-  "不動産",
-];
-
-const GOALS = [
-  { value: "mentor", label: "メンターを探す" },
-  { value: "mentee", label: "メンティーを探す" },
-  { value: "networking", label: "ビジネス交流" },
-  { value: "friendship", label: "友人・交流" },
-  { value: "activity_partner", label: "一緒に活動する相手" },
-];
-
-const INTERESTS = [
-  "AI",
-  "スタートアップ",
-  "投資",
-  "UXデザイン",
-  "データサイエンス",
-  "プロダクトマネジメント",
-  "グロースハック",
-  "ブロックチェーン",
-  "サステナビリティ",
-  "リーダーシップ",
-];
-
-const HOBBIES = [
-  "サッカー",
-  "テニス",
-  "読書",
-  "ハイキング",
-  "料理",
-  "写真",
-  "旅行",
-  "ヨガ",
-  "ゲーム",
-  "絵画",
-];
-
-const AGE_RANGES = [
-  "18歳未満",
-  "18〜22歳",
-  "23〜26歳",
-  "27〜30歳",
-  "30〜34歳",
-  "35歳以上",
-];
-
-const CONTACT_METHODS = ["電話", "メール", "LINE"];
+import { useLocale } from "@/hooks/use-locale";
 
 const formSchema = insertProfileSchema.extend({
-  alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
-  profession: z.array(z.string()).min(1, "Select at least one profession"),
-  goal: z.array(z.string()).min(1, "Select at least one goal"),
-  interests: z.array(z.string()).min(1, "Select at least one interest"),
-  hobbies: z.array(z.string()).min(1, "Select at least one hobby"),
+  alias: z.string().min(1, t("onboarding.alias_required")).min(2, t("onboarding.alias_min_length")),
+  profession: z.array(z.string()).min(1, t("onboarding.select_profession")),
+  goal: z.array(z.string()).min(1, t("onboarding.select_goal")),
+  interests: z.array(z.string()).min(1, t("onboarding.select_interest")),
+  hobbies: z.array(z.string()).min(1, t("onboarding.select_hobby")),
 });
 
 type FormData = z.infer<typeof formSchema>;
 
 export default function Onboarding() {
+  useLocale();
+
   const { user } = useAuth();
   const { data: existingProfile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
   const [, setLocation] = useLocation();
+
+  const PROFESSIONS = [
+    t("onboarding.technology"),
+    t("onboarding.finance"),
+    t("onboarding.consulting"),
+    t("onboarding.healthcare"),
+    t("onboarding.education"),
+    t("onboarding.arts"),
+    t("onboarding.engineering"),
+    t("onboarding.law"),
+    t("onboarding.marketing"),
+    t("onboarding.real_estate"),
+  ];
+
+  const GOALS = [
+    { value: "mentor", label: t("onboarding.find_mentor") },
+    { value: "mentee", label: t("onboarding.find_mentee") },
+    { value: "networking", label: t("onboarding.professional_networking") },
+    { value: "friendship", label: t("onboarding.friendship_social") },
+    { value: "activity_partner", label: t("onboarding.activity_partner") },
+  ];
+
+  const INTERESTS = [
+    t("onboarding.ai"),
+    t("onboarding.startups"),
+    t("onboarding.investing"),
+    t("onboarding.ux_design"),
+    t("onboarding.data_science"),
+    t("onboarding.product_management"),
+    t("onboarding.growth_hacking"),
+    t("onboarding.blockchain"),
+    t("onboarding.sustainability"),
+    t("onboarding.leadership"),
+  ];
+
+  const HOBBIES = [
+    t("onboarding.soccer"),
+    t("onboarding.tennis"),
+    t("onboarding.reading"),
+    t("onboarding.hiking"),
+    t("onboarding.cooking"),
+    t("onboarding.photography"),
+    t("onboarding.traveling"),
+    t("onboarding.yoga"),
+    t("onboarding.gaming"),
+    t("onboarding.painting"),
+  ];
+
+  const AGE_RANGES = [
+    t("onboarding.age_below_18"),
+    t("onboarding.age_18_22"),
+    t("onboarding.age_23_26"),
+    t("onboarding.age_27_30"),
+    t("onboarding.age_30_34"),
+    t("onboarding.age_above_34"),
+  ];
+
+  const CONTACT_METHODS = [
+    t("onboarding.phone"),
+    t("onboarding.email"),
+    t("onboarding.line"),
+  ];
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -142,14 +149,11 @@ export default function Onboarding() {
           </div>
           <CardTitle className="text-3xl font-display font-bold">
             {existingProfile
-              ? t("client/src/pages/Onboarding.tsx", "Edit Your Profile")
-              : t("client/src/pages/Onboarding.tsx", "Create Your Persona")}
+              ? t("onboarding.edit_profile")
+              : t("onboarding.create_persona")}
           </CardTitle>
           <CardDescription className="text-lg">
-            {t(
-              "client/src/pages/Onboarding.tsx",
-              "This information will be visible to others. Keep it professional yet authentic."
-            )}
+            {t("onboarding.profile_visibility_note")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -162,14 +166,11 @@ export default function Onboarding() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Onboarding.tsx", "Alias (Anonymous Name)")}
+                        {t("onboarding.alias_label")}
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t(
-                            "client/src/pages/Onboarding.tsx",
-                            "e.g. Maverick, Strategist..."
-                          )}
+                          placeholder={t("onboarding.alias_placeholder")}
                           {...field}
                           className="bg-background border-white/10"
                           data-testid="input-alias"
@@ -186,16 +187,13 @@ export default function Onboarding() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Onboarding.tsx", "Age Range")}
+                        {t("onboarding.age_range")}
                       </FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className="bg-background border-white/10" data-testid="select-age-range">
                             <SelectValue
-                              placeholder={t(
-                                "client/src/pages/Onboarding.tsx",
-                                "Select age range"
-                              )}
+                              placeholder={t("onboarding.select_age_range")}
                             />
                           </SelectTrigger>
                         </FormControl>
@@ -219,20 +217,14 @@ export default function Onboarding() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t(
-                        "client/src/pages/Onboarding.tsx",
-                        "Profession / Industry (select at least 1)"
-                      )}
+                      {t("onboarding.profession_label")}
                     </FormLabel>
                     <FormControl>
                       <TagInput
                         value={field.value || []}
                         onChange={field.onChange}
                         suggestions={PROFESSIONS}
-                        placeholder={t(
-                          "client/src/pages/Onboarding.tsx",
-                          "Select or type professions"
-                        )}
+                        placeholder={t("onboarding.profession_placeholder")}
                         data-testid="input-profession"
                       />
                     </FormControl>
@@ -247,20 +239,14 @@ export default function Onboarding() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t(
-                        "client/src/pages/Onboarding.tsx",
-                        "What are you looking for? (select at least 1)"
-                      )}
+                      {t("onboarding.goals_label")}
                     </FormLabel>
                     <FormControl>
                       <TagInput
                         value={field.value || []}
                         onChange={field.onChange}
                         suggestions={GOALS.map((g) => g.label)}
-                        placeholder={t(
-                          "client/src/pages/Onboarding.tsx",
-                          "Select or type your goals"
-                        )}
+                        placeholder={t("onboarding.goals_placeholder")}
                         data-testid="input-goal"
                       />
                     </FormControl>
@@ -275,14 +261,11 @@ export default function Onboarding() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {t("client/src/pages/Onboarding.tsx", 'Bio (The "Why")')}
+                      {t("onboarding.bio_label")}
                     </FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder={t(
-                          "client/src/pages/Onboarding.tsx",
-                          "Share a bit about yourself..."
-                        )}
+                        placeholder={t("onboarding.bio_placeholder")}
                         className="bg-background border-white/10 resize-none min-h-[100px]"
                         {...field}
                         data-testid="textarea-bio"
@@ -300,20 +283,14 @@ export default function Onboarding() {
                   render={({ field }) => (
                     <FormItem>
                     <FormLabel>
-                      {t(
-                        "client/src/pages/Onboarding.tsx",
-                        "Professional Interests (select at least 1)"
-                      )}
+                      {t("onboarding.interests_label")}
                     </FormLabel>
                       <FormControl>
                         <TagInput
                           value={field.value || []}
                           onChange={field.onChange}
                           suggestions={INTERESTS}
-                        placeholder={t(
-                          "client/src/pages/Onboarding.tsx",
-                          "Select or type interests"
-                        )}
+                          placeholder={t("onboarding.interests_placeholder")}
                           data-testid="input-interests"
                         />
                       </FormControl>
@@ -328,20 +305,14 @@ export default function Onboarding() {
                   render={({ field }) => (
                     <FormItem>
                     <FormLabel>
-                      {t(
-                        "client/src/pages/Onboarding.tsx",
-                        "Hobbies & Passions (select at least 1)"
-                      )}
+                      {t("onboarding.hobbies_label")}
                     </FormLabel>
                       <FormControl>
                         <TagInput
                           value={field.value || []}
                           onChange={field.onChange}
                           suggestions={HOBBIES}
-                        placeholder={t(
-                          "client/src/pages/Onboarding.tsx",
-                          "Select or type hobbies"
-                        )}
+                          placeholder={t("onboarding.hobbies_placeholder")}
                           data-testid="input-hobbies"
                         />
                       </FormControl>
@@ -353,13 +324,10 @@ export default function Onboarding() {
 
               <div className="border-t border-white/10 pt-6 space-y-4">
                 <h3 className="text-lg font-semibold">
-                  {t("client/src/pages/Onboarding.tsx", "Contact Information")}
+                  {t("onboarding.contact_information")}
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  {t(
-                    "client/src/pages/Onboarding.tsx",
-                    "This will be shared with your accepted connections."
-                  )}
+                  {t("onboarding.contact_shared_note")}
                 </p>
                 <div className="grid md:grid-cols-2 gap-6">
                   <FormField
@@ -368,7 +336,7 @@ export default function Onboarding() {
                     render={({ field }) => (
                       <FormItem>
                     <FormLabel>
-                      {t("client/src/pages/Onboarding.tsx", "Preferred Contact Method")}
+                      {t("onboarding.preferred_contact_method")}
                     </FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
@@ -377,10 +345,7 @@ export default function Onboarding() {
                               data-testid="select-contact-method"
                             >
                               <SelectValue
-                                placeholder={t(
-                                  "client/src/pages/Onboarding.tsx",
-                                  "Select method"
-                                )}
+                                placeholder={t("onboarding.select_method")}
                               />
                             </SelectTrigger>
                           </FormControl>
@@ -403,14 +368,11 @@ export default function Onboarding() {
                     render={({ field }) => (
                       <FormItem>
                     <FormLabel>
-                      {t("client/src/pages/Onboarding.tsx", "Contact Info")}
+                      {t("onboarding.contact_info")}
                     </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder={t(
-                              "client/src/pages/Onboarding.tsx",
-                              "Your phone, email, or LINE ID"
-                            )}
+                            placeholder={t("onboarding.contact_placeholder")}
                             {...field}
                             className="bg-background border-white/10"
                             data-testid="input-contact-value"
@@ -433,12 +395,12 @@ export default function Onboarding() {
                   {isPending ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      {t("client/src/pages/Onboarding.tsx", "Saving...")}
+                      {t("onboarding.saving")}
                     </>
                   ) : existingProfile ? (
-                    t("client/src/pages/Onboarding.tsx", "Save Changes")
+                    t("onboarding.save_changes")
                   ) : (
-                    t("client/src/pages/Onboarding.tsx", "Enter the Community")
+                    t("onboarding.enter_community")
                   )}
                 </Button>
               </div>
