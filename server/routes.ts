@@ -39,10 +39,14 @@ export async function registerRoutes(
       const input = api.profiles.upsert.input.parse(req.body);
       const profile = await storage.upsertProfile(userId, input);
 
-      // Auto-register custom values
-      await storage.registerCustomValues("profession", input.profession, userId);
-      await storage.registerCustomValues("interests", input.interests, userId);
-      await storage.registerCustomValues("hobbies", input.hobbies, userId);
+      // Auto-register custom values (non-blocking — don't fail profile save)
+      try {
+        await storage.registerCustomValues("profession", input.profession, userId);
+        await storage.registerCustomValues("interests", input.interests, userId);
+        await storage.registerCustomValues("hobbies", input.hobbies, userId);
+      } catch (regErr) {
+        console.warn("Failed to register custom values (custom_options table may not exist yet):", regErr);
+      }
 
       res.json(profile);
     } catch (err) {
@@ -185,8 +189,13 @@ export async function registerRoutes(
 
   app.get(api.customOptions.list.path, async (req, res) => {
     if (!isAuthed(req)) return res.sendStatus(401);
-    const options = await storage.getCustomOptions();
-    res.json(options);
+    try {
+      const options = await storage.getCustomOptions();
+      res.json(options);
+    } catch (err) {
+      console.warn("Failed to fetch custom options (table may not exist yet):", err);
+      res.json([]);
+    }
   });
 
   // === Admin Routes ===
@@ -544,8 +553,13 @@ export async function registerRoutes(
     if (!myProfile || !myProfile.isAdmin) {
       return res.status(403).json({ message: "Admin access required" });
     }
-    const options = await storage.getCustomOptions();
-    res.json(options);
+    try {
+      const options = await storage.getCustomOptions();
+      res.json(options);
+    } catch (err) {
+      console.warn("Failed to fetch admin custom options (table may not exist yet):", err);
+      res.json([]);
+    }
   });
 
   app.patch("/api/admin/custom-options/:id", async (req, res) => {

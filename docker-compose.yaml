@@ -34,10 +34,12 @@ services:
       TZ: Asia/Tokyo
       LANG: ja_JP.UTF-8
       LC_ALL: ja_JP.UTF-8
-    command: >
-      sh -lc '
+    command:
+      - sh
+      - -lc
+      - |
         if command -v psql >/dev/null 2>&1; then
-          INIT_DONE=$(psql "$$DATABASE_URL" -tAc "SELECT 1 FROM information_schema.tables WHERE table_name = ''_init_marker'';" || true)
+          INIT_DONE=$$(psql "$$DATABASE_URL" -tAc "SELECT 1 FROM information_schema.tables WHERE table_name = '_init_marker';" || true)
           if [ "$$INIT_DONE" = "1" ]; then
             echo "DB already initialized. Skipping db:push."
             exit 0
@@ -45,13 +47,18 @@ services:
         fi
 
         echo "Running db:push..."
+
+        # Drop non-schema marker table before drizzle push to prevent rename confusion
+        if command -v psql >/dev/null 2>&1; then
+          psql "$$DATABASE_URL" -c "DROP TABLE IF EXISTS _init_marker;" || true
+        fi
+
         npm ci
         npm run db:push
 
         if command -v psql >/dev/null 2>&1; then
           psql "$$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS _init_marker (id int primary key); INSERT INTO _init_marker (id) VALUES (1) ON CONFLICT DO NOTHING;"
         fi
-      '
     restart: "no"
 
 volumes:
