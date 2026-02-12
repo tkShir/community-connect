@@ -6,8 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Briefcase, UserPlus, Star, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 export default function Discover() {
+  useLocale();
   const { data: profiles, isLoading, error } = usePotentialMatches();
   const { mutate: requestMatch, isPending } = useRequestMatch();
 
@@ -24,7 +26,7 @@ export default function Discover() {
   if (error) {
     return (
       <div className="text-center text-red-500 py-10">
-        {t("client/src/pages/Discover.tsx", "Failed to load recommendations.")}
+        {t("discover.failed_to_load")}
       </div>
     );
   }
@@ -36,13 +38,10 @@ export default function Discover() {
           <Sparkles className="w-10 h-10 text-muted-foreground" />
         </div>
         <h2 className="text-2xl font-display font-bold mb-2">
-          {t("client/src/pages/Discover.tsx", "No new recommendations")}
+          {t("discover.no_recommendations")}
         </h2>
         <p className="text-muted-foreground max-w-md">
-          {t(
-            "client/src/pages/Discover.tsx",
-            "We've run out of potential matches for now. Check back later as more members join the circle."
-          )}
+          {t("discover.no_matches_message")}
         </p>
       </div>
     );
@@ -52,16 +51,13 @@ export default function Discover() {
     <div className="space-y-8">
       <header className="mb-8">
         <h1 className="text-4xl font-display font-bold text-foreground">
-          {t("client/src/pages/Discover.tsx", "Discover")}
+          {t("discover.discover")}
         </h1>
         <p className="text-muted-foreground mt-2">
-          {t(
-            "client/src/pages/Discover.tsx",
-            "Find your next connection based on shared interests."
-          )}
+          {t("discover.find_connection")}
         </p>
       </header>
-      
+
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         <AnimatePresence>
           {profiles.map((profile, index) => (
@@ -80,7 +76,7 @@ export default function Discover() {
                     </div>
                   </div>
                 </div>
-                
+
                 <CardHeader className="pt-10 pb-4">
                   <div className="flex justify-between items-start">
                     <div>
@@ -128,14 +124,14 @@ export default function Discover() {
                 </CardContent>
 
                 <CardFooter className="pt-4 border-t border-white/5 bg-white/[0.02]">
-                  <Button 
+                  <Button
                     className="w-full bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all duration-300 font-semibold"
                     onClick={() => requestMatch(profile.id)}
                     disabled={isPending}
                   >
                     {isPending
-                      ? t("client/src/pages/Discover.tsx", "Sending...")
-                      : t("client/src/pages/Discover.tsx", "Connect Anonymously")}
+                      ? t("discover.sending")
+                      : t("discover.connect_anonymously")}
                     {!isPending && <UserPlus className="ml-2 w-4 h-4" />}
                   </Button>
                 </CardFooter>

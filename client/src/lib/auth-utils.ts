@@ -10,11 +10,8 @@ export function redirectToLogin(
 ) {
   if (toast) {
     toast({
-      title: t("client/src/lib/auth-utils.ts", "Unauthorized"),
-      description: t(
-        "client/src/lib/auth-utils.ts",
-        "You are logged out. Logging in again..."
-      ),
+      title: t("auth.unauthorized"),
+      description: t("auth.logged_out"),
       variant: "destructive",
     });
   }

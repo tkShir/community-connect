@@ -35,12 +35,7 @@ function useCarousel() {
   const context = React.useContext(CarouselContext)
 
   if (!context) {
-    throw new Error(
-      t(
-        "client/src/components/ui/carousel.tsx",
-        "useCarousel must be used within a <Carousel />"
-      )
-    )
+    throw new Error(t("carousel.use_carousel_error"))
   }
 
   return context
@@ -222,7 +217,7 @@ const CarouselPrevious = React.forwardRef<
     >
       <ArrowLeft className="h-4 w-4" />
       <span className="sr-only">
-        {t("client/src/components/ui/carousel.tsx", "Previous slide")}
+        {t("carousel.previous_slide")}
       </span>
     </Button>
   )
@@ -253,7 +248,7 @@ const CarouselNext = React.forwardRef<
     >
       <ArrowRight className="h-4 w-4" />
       <span className="sr-only">
-        {t("client/src/components/ui/carousel.tsx", "Next slide")}
+        {t("carousel.next_slide")}
       </span>
     </Button>
   )

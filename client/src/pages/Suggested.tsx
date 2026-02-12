@@ -6,8 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Briefcase, UserPlus, Lightbulb, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 export default function Suggested() {
+  useLocale();
   const { data: profiles, isLoading, error } = useSuggestedMatches();
   const { mutate: requestMatch, isPending } = useRequestMatch();
 
@@ -24,7 +26,7 @@ export default function Suggested() {
   if (error) {
     return (
       <div className="text-center text-red-500 py-10">
-        {t("client/src/pages/Suggested.tsx", "Failed to load suggested connections.")}
+        {t("suggested.failed_to_load")}
       </div>
     );
   }
@@ -34,10 +36,10 @@ export default function Suggested() {
       <div className="space-y-8">
         <header>
           <h1 className="text-4xl font-display font-bold text-foreground">
-            {t("client/src/pages/Suggested.tsx", "Suggested Connections")}
+            {t("suggested.suggested_connections")}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {t("client/src/pages/Suggested.tsx", "Mentor/Mentee matches in your industry.")}
+            {t("suggested.mentor_mentee_matches")}
           </p>
         </header>
         <div className="flex flex-col items-center justify-center h-[40vh] text-center px-4">
@@ -45,13 +47,10 @@ export default function Suggested() {
             <Lightbulb className="w-10 h-10 text-muted-foreground" />
           </div>
           <h2 className="text-2xl font-display font-bold mb-2">
-            {t("client/src/pages/Suggested.tsx", "No suggestions yet")}
+            {t("suggested.no_suggestions")}
           </h2>
           <p className="text-muted-foreground max-w-md">
-            {t(
-              "client/src/pages/Suggested.tsx",
-              "We'll suggest mentor/mentee connections when we find people in your industry with complementary goals."
-            )}
+            {t("suggested.suggest_when_found")}
           </p>
         </div>
       </div>
@@ -62,10 +61,10 @@ export default function Suggested() {
     <div className="space-y-8">
       <header>
         <h1 className="text-4xl font-display font-bold text-foreground">
-          {t("client/src/pages/Suggested.tsx", "Suggested Connections")}
+          {t("suggested.suggested_connections")}
         </h1>
         <p className="text-muted-foreground mt-2">
-          {t("client/src/pages/Suggested.tsx", "People in your industry with complementary goals.")}
+          {t("suggested.complementary_goals")}
         </p>
       </header>
 
@@ -125,8 +124,8 @@ export default function Suggested() {
                     data-testid={`button-connect-${profile.id}`}
                   >
                     {isPending
-                      ? t("client/src/pages/Suggested.tsx", "Sending...")
-                      : t("client/src/pages/Suggested.tsx", "Request Connection")}
+                      ? t("suggested.sending")
+                      : t("suggested.request_connection")}
                     {!isPending && <UserPlus className="ml-2 w-4 h-4" />}
                   </Button>
                 </CardFooter>

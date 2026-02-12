@@ -16,7 +16,7 @@ interface TagInputProps {
 export function TagInput({
   value,
   onChange,
-  placeholder = t("client/src/components/TagInput.tsx", "Type and press Enter"),
+  placeholder = t("tag_input.placeholder"),
   suggestions = [],
   maxTags,
   "data-testid": testId,

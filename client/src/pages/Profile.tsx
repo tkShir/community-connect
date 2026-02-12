@@ -5,10 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Edit, LogOut, Phone, Mail, MessageCircle } from "lucide-react";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
 
 export default function Profile() {
+  useLocale();
   const { data: profile, isLoading } = useMyProfile();
   const { logout } = useAuth();
 
@@ -34,10 +36,10 @@ export default function Profile() {
       <div className="flex justify-between items-end">
         <div>
           <h1 className="text-4xl font-display font-bold">
-            {t("client/src/pages/Profile.tsx", "My Profile")}
+            {t("profile.my_profile")}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {t("client/src/pages/Profile.tsx", "This is how you appear to others.")}
+            {t("profile.appearance_note")}
           </p>
         </div>
         <Link href="/onboarding">
@@ -47,7 +49,7 @@ export default function Profile() {
             data-testid="button-edit-profile"
           >
             <Edit className="w-4 h-4 mr-2" />{" "}
-            {t("client/src/pages/Profile.tsx", "Edit Profile")}
+            {t("profile.edit_profile")}
           </Button>
         </Link>
       </div>
@@ -83,7 +85,7 @@ export default function Profile() {
         <CardContent className="px-8 pb-10 space-y-8">
           <div>
             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
-              {t("client/src/pages/Profile.tsx", "Bio")}
+              {t("profile.bio")}
             </h3>
             <p className="text-lg leading-relaxed">{profile.bio}</p>
           </div>
@@ -91,7 +93,7 @@ export default function Profile() {
           <div className="grid md:grid-cols-2 gap-8">
             <div>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
-                {t("client/src/pages/Profile.tsx", "Interests")}
+                {t("profile.interests")}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {profile.interests.map((tag: string) => (
@@ -103,7 +105,7 @@ export default function Profile() {
             </div>
             <div>
               <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
-                {t("client/src/pages/Profile.tsx", "Hobbies")}
+                {t("profile.hobbies")}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {profile.hobbies.map((tag: string) => (
@@ -117,7 +119,7 @@ export default function Profile() {
 
           <div className="pt-6 border-t border-white/10">
             <h3 className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">
-              {t("client/src/pages/Profile.tsx", "Contact Info")}
+              {t("profile.contact_info")}
             </h3>
             <div className="flex items-center gap-3 text-lg">
               {getContactIcon(profile.contactMethod)}
@@ -135,7 +137,7 @@ export default function Profile() {
           className="text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           <LogOut className="w-4 h-4 mr-2" />{" "}
-          {t("client/src/pages/Profile.tsx", "Log Out")}
+          {t("profile.log_out")}
         </Button>
       </div>
     </div>

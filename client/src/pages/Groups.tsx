@@ -17,19 +17,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Group } from "@shared/schema";
 import { t } from "@/lib/i18n";
+import { useLocale } from "@/hooks/use-locale";
 
 const suggestFormSchema = z.object({
   title: z
     .string()
-    .min(2, t("client/src/pages/Groups.tsx", "Title must be at least 2 characters")),
+    .min(2, t("groups.title_min_length")),
   description: z
     .string()
-    .min(1, t("client/src/pages/Groups.tsx", "Description is required")),
+    .min(1, t("groups.description_required")),
 });
 
 type SuggestFormValues = z.infer<typeof suggestFormSchema>;
 
 export default function Groups() {
+  useLocale();
   const { data: publishedGroups, isLoading: loadingPublished } = usePublishedGroups();
   const { data: myGroups, isLoading: loadingMine } = useMyGroups();
   const { mutate: suggestGroup, isPending: isSuggesting } = useSuggestGroup();
@@ -49,21 +51,18 @@ export default function Groups() {
     suggestGroup(data, {
       onSuccess: () => {
         toast({
-          title: t("client/src/pages/Groups.tsx", "Group suggested"),
-          description: t(
-            "client/src/pages/Groups.tsx",
-            "Your group suggestion has been submitted for admin review."
-          ),
+          title: t("groups.group_suggested"),
+          description: t("groups.group_suggested_description"),
         });
         form.reset();
         setIsDialogOpen(false);
       },
       onError: (error: any) => {
         toast({
-          title: t("client/src/pages/Groups.tsx", "Error"),
+          title: "Error",
           description:
             error.message ||
-            t("client/src/pages/Groups.tsx", "Failed to submit group suggestion"),
+            t("groups.failed_to_submit"),
           variant: "destructive",
         });
       },
@@ -75,19 +74,19 @@ export default function Groups() {
       case "published":
         return (
           <Badge className="bg-green-600 text-white">
-            {t("client/src/pages/Groups.tsx", "Published")}
+            {t("groups.published")}
           </Badge>
         );
       case "pending_approval":
         return (
           <Badge className="bg-yellow-600 text-white">
-            {t("client/src/pages/Groups.tsx", "Pending Approval")}
+            {t("groups.pending_approval")}
           </Badge>
         );
       case "denied":
         return (
           <Badge variant="destructive">
-            {t("client/src/pages/Groups.tsx", "Denied")}
+            {t("groups.denied")}
           </Badge>
         );
       default:
@@ -110,32 +109,26 @@ export default function Groups() {
       <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-4xl font-display font-bold text-foreground">
-            {t("client/src/pages/Groups.tsx", "Groups")}
+            {t("groups.groups")}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {t(
-              "client/src/pages/Groups.tsx",
-              "Join interest groups and connect with like-minded people."
-            )}
+            {t("groups.join_groups_description")}
           </p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-suggest-group">
               <Plus className="w-4 h-4 mr-2" />
-              Suggest a Group
+              {t("groups.suggest_group")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
-                {t("client/src/pages/Groups.tsx", "Suggest a New Group")}
+                {t("groups.suggest_new_group")}
               </DialogTitle>
               <DialogDescription>
-                {t(
-                  "client/src/pages/Groups.tsx",
-                  "Submit your group idea for admin approval. Once approved, it will be visible to all members."
-                )}
+                {t("groups.submit_for_approval")}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -146,14 +139,11 @@ export default function Groups() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Groups.tsx", "Group Name")}
+                        {t("groups.group_name")}
                       </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder={t(
-                            "client/src/pages/Groups.tsx",
-                            "e.g., Soccer Enthusiasts, Crypto Trading"
-                          )}
+                          placeholder={t("groups.group_name_placeholder")}
                           data-testid="input-group-title"
                           {...field}
                         />
@@ -168,14 +158,11 @@ export default function Groups() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {t("client/src/pages/Groups.tsx", "Description")}
+                        {t("groups.description")}
                       </FormLabel>
                       <FormControl>
                         <Textarea
-                          placeholder={t(
-                            "client/src/pages/Groups.tsx",
-                            "Briefly describe what this group is about..."
-                          )}
+                          placeholder={t("groups.description_placeholder")}
                           data-testid="input-group-description"
                           {...field}
                         />
@@ -191,8 +178,8 @@ export default function Groups() {
                     data-testid="button-submit-group"
                   >
                     {isSuggesting
-                      ? t("client/src/pages/Groups.tsx", "Submitting...")
-                      : t("client/src/pages/Groups.tsx", "Submit for Review")}
+                      ? t("groups.submitting")
+                      : t("groups.submit_for_review")}
                     {!isSuggesting && <Send className="w-4 h-4 ml-2" />}
                   </Button>
                 </DialogFooter>
@@ -206,11 +193,11 @@ export default function Groups() {
         <TabsList className="grid w-full grid-cols-2 max-w-[400px]">
           <TabsTrigger value="all-groups" data-testid="tab-all-groups">
             <UsersRound className="w-4 h-4 mr-2" />
-            All Groups
+            {t("groups.all_groups")}
           </TabsTrigger>
           <TabsTrigger value="my-suggestions" data-testid="tab-my-suggestions">
             <Send className="w-4 h-4 mr-2" />
-            My Suggestions
+            {t("groups.my_suggestions")}
           </TabsTrigger>
         </TabsList>
 
@@ -220,13 +207,13 @@ export default function Groups() {
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
                 <UsersRound className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-display font-bold mb-2">No groups yet</h2>
+              <h2 className="text-2xl font-display font-bold mb-2">{t("groups.no_groups")}</h2>
               <p className="text-muted-foreground max-w-md mb-6">
-                Be the first to suggest a group for the community!
+                {t("groups.be_first_to_suggest")}
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Suggest a Group
+                {t("groups.suggest_group")}
               </Button>
             </div>
           ) : (
@@ -272,12 +259,12 @@ export default function Groups() {
                               >
                                 <Button className="w-full sm:w-auto" data-testid={`button-join-group-${group.id}`}>
                                   <ExternalLink className="w-4 h-4 mr-2" />
-                                  Join LINE Group
+                                  {t("groups.join_line_group")}
                                 </Button>
                               </a>
                             ) : (
                               <p className="text-sm text-muted-foreground">
-                                LINE group link not yet available. Check back soon!
+                                {t("groups.line_link_not_available")}
                               </p>
                             )}
                           </motion.div>
@@ -302,13 +289,13 @@ export default function Groups() {
               <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
                 <Send className="w-10 h-10 text-muted-foreground" />
               </div>
-              <h2 className="text-2xl font-display font-bold mb-2">No suggestions yet</h2>
+              <h2 className="text-2xl font-display font-bold mb-2">{t("groups.no_suggestions")}</h2>
               <p className="text-muted-foreground max-w-md mb-6">
-                You haven't suggested any groups. Start by submitting one!
+                {t("groups.no_suggestions_message")}
               </p>
               <Button onClick={() => setIsDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Suggest a Group
+                {t("groups.suggest_group")}
               </Button>
             </div>
           ) : (
@@ -339,7 +326,7 @@ export default function Groups() {
                           <div className="bg-destructive/10 p-4 rounded-lg flex items-start gap-3 mt-4">
                             <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-destructive">Denial Reason</p>
+                              <p className="text-sm font-medium text-destructive">{t("groups.denial_reason")}</p>
                               <p className="text-sm text-muted-foreground">{group.denialReason}</p>
                             </div>
                           </div>
