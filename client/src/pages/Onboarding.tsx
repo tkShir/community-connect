@@ -16,6 +16,19 @@ import { useEffect } from "react";
 import { z } from "zod";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
+import {
+  PROFESSION_KEYS,
+  GOAL_KEYS,
+  INTEREST_KEYS,
+  HOBBY_KEYS,
+  AGE_RANGE_KEYS,
+  CONTACT_METHOD_KEYS,
+  buildOptions,
+  buildCustomOptions,
+  migrateToKey,
+  migrateArrayToKeys,
+} from "@/lib/profile-options";
+import { useCustomOptions } from "@/hooks/use-custom-options";
 
 const formSchema = insertProfileSchema.extend({
   alias: z.string().min(1, t("onboarding.alias_required")).min(2, t("onboarding.alias_min_length")),
@@ -34,68 +47,14 @@ export default function Onboarding() {
   const { data: existingProfile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
   const [, setLocation] = useLocation();
+  useCustomOptions(); // populate custom options cache
 
-  const PROFESSIONS = [
-    t("onboarding.technology"),
-    t("onboarding.finance"),
-    t("onboarding.consulting"),
-    t("onboarding.healthcare"),
-    t("onboarding.education"),
-    t("onboarding.arts"),
-    t("onboarding.engineering"),
-    t("onboarding.law"),
-    t("onboarding.marketing"),
-    t("onboarding.real_estate"),
-  ];
-
-  const GOALS = [
-    { value: "mentor", label: t("onboarding.find_mentor") },
-    { value: "mentee", label: t("onboarding.find_mentee") },
-    { value: "networking", label: t("onboarding.professional_networking") },
-    { value: "friendship", label: t("onboarding.friendship_social") },
-    { value: "activity_partner", label: t("onboarding.activity_partner") },
-  ];
-
-  const INTERESTS = [
-    t("onboarding.ai"),
-    t("onboarding.startups"),
-    t("onboarding.investing"),
-    t("onboarding.ux_design"),
-    t("onboarding.data_science"),
-    t("onboarding.product_management"),
-    t("onboarding.growth_hacking"),
-    t("onboarding.blockchain"),
-    t("onboarding.sustainability"),
-    t("onboarding.leadership"),
-  ];
-
-  const HOBBIES = [
-    t("onboarding.soccer"),
-    t("onboarding.tennis"),
-    t("onboarding.reading"),
-    t("onboarding.hiking"),
-    t("onboarding.cooking"),
-    t("onboarding.photography"),
-    t("onboarding.traveling"),
-    t("onboarding.yoga"),
-    t("onboarding.gaming"),
-    t("onboarding.painting"),
-  ];
-
-  const AGE_RANGES = [
-    t("onboarding.age_below_18"),
-    t("onboarding.age_18_22"),
-    t("onboarding.age_23_26"),
-    t("onboarding.age_27_30"),
-    t("onboarding.age_30_34"),
-    t("onboarding.age_above_34"),
-  ];
-
-  const CONTACT_METHODS = [
-    t("onboarding.phone"),
-    t("onboarding.email"),
-    t("onboarding.line"),
-  ];
+  const professionOptions = [...buildOptions(PROFESSION_KEYS), ...buildCustomOptions("profession")];
+  const goalOptions = buildOptions(GOAL_KEYS);
+  const interestOptions = [...buildOptions(INTEREST_KEYS), ...buildCustomOptions("interests")];
+  const hobbyOptions = [...buildOptions(HOBBY_KEYS), ...buildCustomOptions("hobbies")];
+  const ageRangeOptions = buildOptions(AGE_RANGE_KEYS);
+  const contactMethodOptions = buildOptions(CONTACT_METHOD_KEYS);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -118,13 +77,17 @@ export default function Onboarding() {
       form.reset({
         alias: existingProfile.alias,
         bio: existingProfile.bio,
-        profession: Array.isArray(existingProfile.profession) ? existingProfile.profession : [existingProfile.profession],
-        hobbies: existingProfile.hobbies,
-        interests: existingProfile.interests,
-        goal: Array.isArray(existingProfile.goal) ? existingProfile.goal : [existingProfile.goal],
+        profession: migrateArrayToKeys(
+          Array.isArray(existingProfile.profession) ? existingProfile.profession : [existingProfile.profession]
+        ),
+        hobbies: migrateArrayToKeys(existingProfile.hobbies),
+        interests: migrateArrayToKeys(existingProfile.interests),
+        goal: migrateArrayToKeys(
+          Array.isArray(existingProfile.goal) ? existingProfile.goal : [existingProfile.goal]
+        ),
         isPublic: existingProfile.isPublic,
-        ageRange: existingProfile.ageRange,
-        contactMethod: existingProfile.contactMethod,
+        ageRange: migrateToKey(existingProfile.ageRange),
+        contactMethod: migrateToKey(existingProfile.contactMethod),
         contactValue: existingProfile.contactValue,
       });
     }
@@ -198,9 +161,9 @@ export default function Onboarding() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {AGE_RANGES.map((range) => (
-                            <SelectItem key={range} value={range}>
-                              {range}
+                          {ageRangeOptions.map((opt) => (
+                            <SelectItem key={opt.key} value={opt.key}>
+                              {opt.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -223,7 +186,7 @@ export default function Onboarding() {
                       <TagInput
                         value={field.value || []}
                         onChange={field.onChange}
-                        suggestions={PROFESSIONS}
+                        options={professionOptions}
                         placeholder={t("onboarding.profession_placeholder")}
                         data-testid="input-profession"
                       />
@@ -245,7 +208,7 @@ export default function Onboarding() {
                       <TagInput
                         value={field.value || []}
                         onChange={field.onChange}
-                        suggestions={GOALS.map((g) => g.label)}
+                        options={goalOptions}
                         placeholder={t("onboarding.goals_placeholder")}
                         data-testid="input-goal"
                       />
@@ -289,7 +252,7 @@ export default function Onboarding() {
                         <TagInput
                           value={field.value || []}
                           onChange={field.onChange}
-                          suggestions={INTERESTS}
+                          options={interestOptions}
                           placeholder={t("onboarding.interests_placeholder")}
                           data-testid="input-interests"
                         />
@@ -311,7 +274,7 @@ export default function Onboarding() {
                         <TagInput
                           value={field.value || []}
                           onChange={field.onChange}
-                          suggestions={HOBBIES}
+                          options={hobbyOptions}
                           placeholder={t("onboarding.hobbies_placeholder")}
                           data-testid="input-hobbies"
                         />
@@ -350,9 +313,9 @@ export default function Onboarding() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {CONTACT_METHODS.map((method) => (
-                              <SelectItem key={method} value={method}>
-                                {method}
+                            {contactMethodOptions.map((opt) => (
+                              <SelectItem key={opt.key} value={opt.key}>
+                                {opt.label}
                               </SelectItem>
                             ))}
                           </SelectContent>

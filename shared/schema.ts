@@ -56,6 +56,16 @@ export const events = pgTable("events", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const customOptions = pgTable("custom_options", {
+  id: serial("id").primaryKey(),
+  category: text("category", { enum: ["profession", "interests", "hobbies"] }).notNull(),
+  originalValue: text("original_value").notNull(),
+  labelEn: text("label_en").notNull(),
+  labelJa: text("label_ja").notNull(),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const groups = pgTable("groups", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -106,6 +116,13 @@ export const eventsRelations = relations(events, ({ one }) => ({
   }),
 }));
 
+export const customOptionsRelations = relations(customOptions, ({ one }) => ({
+  creator: one(users, {
+    fields: [customOptions.createdBy],
+    references: [users.id],
+  }),
+}));
+
 export const groupsRelations = relations(groups, ({ one }) => ({
   creator: one(users, {
     fields: [groups.creatorId],
@@ -120,6 +137,7 @@ export const insertMatchSchema = createInsertSchema(matches).omit({ id: true, cr
 export const insertNotificationSchema = createInsertSchema(notifications).omit({ id: true, createdAt: true });
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
+export const insertCustomOptionSchema = createInsertSchema(customOptions).omit({ id: true, createdAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -136,6 +154,9 @@ export type InsertEvent = z.infer<typeof insertEventSchema>;
 
 export type Group = typeof groups.$inferSelect;
 export type InsertGroup = z.infer<typeof insertGroupSchema>;
+
+export type CustomOption = typeof customOptions.$inferSelect;
+export type InsertCustomOption = z.infer<typeof insertCustomOptionSchema>;
 
 export type MatchWithProfile = Match & {
   partnerProfile: Profile;

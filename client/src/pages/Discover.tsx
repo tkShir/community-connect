@@ -7,6 +7,7 @@ import { Briefcase, UserPlus, Star, Hash, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
+import { translateOptionKey, translateOptionKeys } from "@/lib/profile-options";
 
 export default function Discover() {
   useLocale();
@@ -83,13 +84,13 @@ export default function Discover() {
                       <h3 className="text-xl font-bold text-foreground">{profile.alias}</h3>
                       <div className="flex items-center text-sm text-muted-foreground mt-1">
                         <Briefcase className="w-3.5 h-3.5 mr-2" />
-                        {Array.isArray(profile.profession) ? profile.profession.join(", ") : profile.profession}
+                        {Array.isArray(profile.profession) ? translateOptionKeys(profile.profession).join(", ") : translateOptionKey(profile.profession)}
                       </div>
                     </div>
                     <div className="flex flex-wrap gap-1 justify-end">
                       {(Array.isArray(profile.goal) ? profile.goal.slice(0, 2) : [profile.goal]).map((g: string) => (
-                        <Badge key={g} variant="outline" className="border-primary/30 text-primary capitalize text-xs">
-                          {g?.replace('_', ' ')}
+                        <Badge key={g} variant="outline" className="border-primary/30 text-primary text-xs">
+                          {translateOptionKey(g)}
                         </Badge>
                       ))}
                     </div>
@@ -106,7 +107,7 @@ export default function Discover() {
                       <div className="flex flex-wrap gap-2">
                         {profile.interests.slice(0, 3).map((tag) => (
                           <Badge key={tag} variant="secondary" className="bg-secondary/50 text-xs">
-                            <Star className="w-3 h-3 mr-1 opacity-50" /> {tag}
+                            <Star className="w-3 h-3 mr-1 opacity-50" /> {translateOptionKey(tag)}
                           </Badge>
                         ))}
                       </div>
@@ -115,7 +116,7 @@ export default function Discover() {
                       <div className="flex flex-wrap gap-2">
                         {profile.hobbies.slice(0, 3).map((tag) => (
                           <Badge key={tag} variant="secondary" className="bg-secondary/30 text-xs text-muted-foreground">
-                            <Hash className="w-3 h-3 mr-1 opacity-50" /> {tag}
+                            <Hash className="w-3 h-3 mr-1 opacity-50" /> {translateOptionKey(tag)}
                           </Badge>
                         ))}
                       </div>

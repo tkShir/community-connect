@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema } from "@shared/routes";
+import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema, customOptionUpdateSchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
@@ -34,10 +34,20 @@ export async function registerRoutes(
   app.post(api.profiles.upsert.path, async (req, res) => {
     if (!isAuthed(req)) return res.sendStatus(401);
     const userId = getUserId(req);
-    
+
     try {
       const input = api.profiles.upsert.input.parse(req.body);
       const profile = await storage.upsertProfile(userId, input);
+
+      // Auto-register custom values (non-blocking — don't fail profile save)
+      try {
+        await storage.registerCustomValues("profession", input.profession, userId);
+        await storage.registerCustomValues("interests", input.interests, userId);
+        await storage.registerCustomValues("hobbies", input.hobbies, userId);
+      } catch (regErr) {
+        console.warn("Failed to register custom values (custom_options table may not exist yet):", regErr);
+      }
+
       res.json(profile);
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -173,6 +183,19 @@ export async function registerRoutes(
     if (!isAuthed(req)) return res.sendStatus(401);
     await storage.markNotificationRead(Number(req.params.id));
     res.json({ success: true });
+  });
+
+  // === Custom Options (public - for translation lookups) ===
+
+  app.get(api.customOptions.list.path, async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    try {
+      const options = await storage.getCustomOptions();
+      res.json(options);
+    } catch (err) {
+      console.warn("Failed to fetch custom options (table may not exist yet):", err);
+      res.json([]);
+    }
   });
 
   // === Admin Routes ===
@@ -515,6 +538,62 @@ export async function registerRoutes(
     try {
       const groupId = Number(req.params.id);
       await storage.deleteGroup(groupId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Admin: Custom Options ===
+
+  app.get("/api/admin/custom-options", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const options = await storage.getCustomOptions();
+      res.json(options);
+    } catch (err) {
+      console.warn("Failed to fetch admin custom options (table may not exist yet):", err);
+      res.json([]);
+    }
+  });
+
+  app.patch("/api/admin/custom-options/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const optionId = Number(req.params.id);
+      const validated = customOptionUpdateSchema.parse(req.body);
+      const updated = await storage.updateCustomOption(optionId, validated);
+      if (!updated) return res.status(404).json({ message: "Custom option not found" });
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/custom-options/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const optionId = Number(req.params.id);
+      await storage.deleteCustomOption(optionId);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });

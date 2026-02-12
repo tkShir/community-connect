@@ -28,9 +28,12 @@ import { Badge } from "@/components/ui/badge";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { translateOptionKeys, translateOptionKey } from "@/lib/profile-options";
+import { useCustomOptions } from "@/hooks/use-custom-options";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   useLocale();
+  useCustomOptions(); // populate custom options cache app-wide
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { data: profile } = useMyProfile();
@@ -153,8 +156,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {Array.isArray(profile?.profession)
-                    ? profile.profession.join(", ")
-                    : profile?.profession || t("layout.set_up_profile")}
+                    ? translateOptionKeys(profile.profession).join(", ")
+                    : profile?.profession ? translateOptionKey(profile.profession) : t("layout.set_up_profile")}
                 </p>
               </div>
             </div>

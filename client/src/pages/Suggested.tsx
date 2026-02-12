@@ -7,6 +7,7 @@ import { Briefcase, UserPlus, Lightbulb, Star } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
+import { translateOptionKey, translateOptionKeys } from "@/lib/profile-options";
 
 export default function Suggested() {
   useLocale();
@@ -89,16 +90,16 @@ export default function Suggested() {
                           <h3 className="text-xl font-bold">{profile.alias}</h3>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
                             <Briefcase className="w-4 h-4" />
-                            {Array.isArray(profile.profession) ? profile.profession.join(", ") : profile.profession}
+                            {Array.isArray(profile.profession) ? translateOptionKeys(profile.profession).join(", ") : translateOptionKey(profile.profession)}
                             <span className="text-xs">•</span>
-                            <span>{profile.ageRange}</span>
+                            <span>{translateOptionKey(profile.ageRange)}</span>
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {(Array.isArray(profile.goal) ? profile.goal : [profile.goal]).slice(0, 2).map((g: string) => (
-                            <Badge key={g} className="bg-primary/20 text-primary border-primary/30 capitalize text-xs">
+                            <Badge key={g} className="bg-primary/20 text-primary border-primary/30 text-xs">
                               <Star className="w-3 h-3 mr-1" />
-                              {g?.replace("_", " ")}
+                              {translateOptionKey(g)}
                             </Badge>
                           ))}
                         </div>
@@ -109,7 +110,7 @@ export default function Suggested() {
                       <div className="flex flex-wrap gap-2 mt-4">
                         {profile.interests?.slice(0, 4).map((interest: string) => (
                           <Badge key={interest} variant="secondary" className="text-xs bg-secondary/50">
-                            {interest}
+                            {translateOptionKey(interest)}
                           </Badge>
                         ))}
                       </div>

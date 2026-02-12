@@ -1,13 +1,15 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications, events, groups,
+  profiles, matches, notifications, events, groups, customOptions,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
   type MatchWithProfile,
   type Event, type InsertEvent,
-  type Group, type InsertGroup
+  type Group, type InsertGroup,
+  type CustomOption,
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
+import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
 
 export interface IStorage {
   // Profiles
@@ -42,6 +44,13 @@ export interface IStorage {
   approveEvent(id: number): Promise<Event | undefined>;
   denyEvent(id: number, reason: string): Promise<Event | undefined>;
   deleteEvent(id: number): Promise<void>;
+
+  // Custom Options
+  getCustomOptions(): Promise<CustomOption[]>;
+  getCustomOptionsByCategory(category: string): Promise<CustomOption[]>;
+  updateCustomOption(id: number, update: { labelEn?: string; labelJa?: string }): Promise<CustomOption | undefined>;
+  deleteCustomOption(id: number): Promise<void>;
+  registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void>;
 
   // Groups
   createGroup(group: InsertGroup, creatorId: string, createdByAdmin: boolean): Promise<Group>;
@@ -321,6 +330,42 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGroup(id: number): Promise<void> {
     await db.delete(groups).where(eq(groups.id, id));
+  }
+
+  // === Custom Options ===
+
+  async getCustomOptions(): Promise<CustomOption[]> {
+    return await db.select().from(customOptions).orderBy(customOptions.category, customOptions.originalValue);
+  }
+
+  async getCustomOptionsByCategory(category: string): Promise<CustomOption[]> {
+    return await db.select().from(customOptions).where(eq(customOptions.category, category as any));
+  }
+
+  async updateCustomOption(id: number, update: { labelEn?: string; labelJa?: string }): Promise<CustomOption | undefined> {
+    const [updated] = await db.update(customOptions).set(update).where(eq(customOptions.id, id)).returning();
+    return updated;
+  }
+
+  async deleteCustomOption(id: number): Promise<void> {
+    await db.delete(customOptions).where(eq(customOptions.id, id));
+  }
+
+  async registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void> {
+    for (const value of values) {
+      if (isPredefinedKey(category, value)) continue;
+      // Check if already registered
+      const [existing] = await db.select().from(customOptions)
+        .where(and(eq(customOptions.category, category), eq(customOptions.originalValue, value)));
+      if (existing) continue;
+      await db.insert(customOptions).values({
+        category,
+        originalValue: value,
+        labelEn: value,
+        labelJa: value,
+        createdBy: userId,
+      });
+    }
   }
 }
 

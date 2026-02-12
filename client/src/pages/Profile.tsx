@@ -8,6 +8,7 @@ import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import { useAuth } from "@/hooks/use-auth";
 import { Link } from "wouter";
+import { translateOptionKey, translateOptionKeys } from "@/lib/profile-options";
 
 export default function Profile() {
   useLocale();
@@ -68,14 +69,14 @@ export default function Profile() {
             <div>
               <h2 className="text-3xl font-bold text-foreground">{profile.alias}</h2>
               <p className="text-lg text-primary mt-1">
-                {Array.isArray(profile.profession) ? profile.profession.join(", ") : profile.profession}
+                {Array.isArray(profile.profession) ? translateOptionKeys(profile.profession).join(", ") : translateOptionKey(profile.profession)}
               </p>
-              <p className="text-sm text-muted-foreground mt-1">{profile.ageRange}</p>
+              <p className="text-sm text-muted-foreground mt-1">{translateOptionKey(profile.ageRange)}</p>
             </div>
             <div className="flex flex-wrap gap-2 justify-end">
               {(Array.isArray(profile.goal) ? profile.goal : [profile.goal]).map((g: string) => (
                 <Badge key={g} className="bg-primary text-primary-foreground px-3 py-1 text-xs uppercase tracking-wide">
-                  {g?.replace("_", " ")}
+                  {translateOptionKey(g)}
                 </Badge>
               ))}
             </div>
@@ -98,7 +99,7 @@ export default function Profile() {
               <div className="flex flex-wrap gap-2">
                 {profile.interests.map((tag: string) => (
                   <Badge key={tag} variant="secondary" className="bg-secondary text-secondary-foreground border border-white/5 py-1.5 px-3">
-                    {tag}
+                    {translateOptionKey(tag)}
                   </Badge>
                 ))}
               </div>
@@ -110,7 +111,7 @@ export default function Profile() {
               <div className="flex flex-wrap gap-2">
                 {profile.hobbies.map((tag: string) => (
                   <Badge key={tag} variant="outline" className="border-white/10 text-muted-foreground py-1.5 px-3">
-                    {tag}
+                    {translateOptionKey(tag)}
                   </Badge>
                 ))}
               </div>
@@ -123,7 +124,7 @@ export default function Profile() {
             </h3>
             <div className="flex items-center gap-3 text-lg">
               {getContactIcon(profile.contactMethod)}
-              <span className="text-muted-foreground">{profile.contactMethod}:</span>
+              <span className="text-muted-foreground">{translateOptionKey(profile.contactMethod)}:</span>
               <span className="font-medium">{profile.contactValue}</span>
             </div>
           </div>

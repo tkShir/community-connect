@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, profiles, matches, notifications, events, groups } from './schema';
+import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, profiles, matches, notifications, events, groups, customOptions } from './schema';
 
 export const profileInputSchema = insertProfileSchema.extend({
   alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
@@ -37,6 +37,11 @@ export const groupInputSchema = insertGroupSchema.extend({
 
 export const groupDenySchema = z.object({
   reason: z.string().min(1, "Denial reason is required"),
+});
+
+export const customOptionUpdateSchema = z.object({
+  labelEn: z.string().min(1).optional(),
+  labelJa: z.string().min(1).optional(),
 });
 
 // ============================================
@@ -176,6 +181,15 @@ export const api = {
       responses: {
         201: z.custom<typeof events.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+  },
+  customOptions: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/custom-options',
+      responses: {
+        200: z.array(z.custom<typeof customOptions.$inferSelect>()),
       },
     },
   },

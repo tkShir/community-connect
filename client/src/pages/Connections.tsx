@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Check, X, Phone, Mail, MessageCircle, Users } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
+import { translateOptionKey, translateOptionKeys } from "@/lib/profile-options";
 
 export default function Connections() {
   useLocale();
@@ -69,12 +70,12 @@ export default function Connections() {
                   <div>
                     <h3 className="font-bold">{match.partner.alias}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {Array.isArray(match.partner.profession) ? match.partner.profession.join(", ") : match.partner.profession}
+                      {Array.isArray(match.partner.profession) ? translateOptionKeys(match.partner.profession).join(", ") : translateOptionKey(match.partner.profession)}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {(Array.isArray(match.partner.goal) ? match.partner.goal : [match.partner.goal]).slice(0, 2).map((g: string) => (
-                        <Badge key={g} variant="outline" className="text-xs capitalize">
-                          {g?.replace("_", " ")}
+                        <Badge key={g} variant="outline" className="text-xs">
+                          {translateOptionKey(g)}
                         </Badge>
                       ))}
                     </div>
@@ -120,7 +121,7 @@ export default function Connections() {
                 <div className="flex-1">
                   <h3 className="font-bold">{match.partner.alias}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {Array.isArray(match.partner.profession) ? match.partner.profession.join(", ") : match.partner.profession}
+                    {Array.isArray(match.partner.profession) ? translateOptionKeys(match.partner.profession).join(", ") : translateOptionKey(match.partner.profession)}
                   </p>
                 </div>
                 <Badge variant="secondary" className="text-xs">
@@ -159,10 +160,10 @@ export default function Connections() {
                     <div>
                       <h3 className="text-lg font-bold">{match.partner.alias}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {Array.isArray(match.partner.profession) ? match.partner.profession.join(", ") : match.partner.profession}
+                        {Array.isArray(match.partner.profession) ? translateOptionKeys(match.partner.profession).join(", ") : translateOptionKey(match.partner.profession)}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {match.partner.ageRange}
+                        {translateOptionKey(match.partner.ageRange)}
                       </p>
                     </div>
                   </div>
@@ -172,7 +173,7 @@ export default function Connections() {
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <div className="flex items-center gap-2 text-sm">
                     {getContactIcon(match.partner.contactMethod)}
-                    <span className="text-muted-foreground">{match.partner.contactMethod}:</span>
+                    <span className="text-muted-foreground">{translateOptionKey(match.partner.contactMethod)}:</span>
                     <span className="font-medium text-primary">{match.partner.contactValue}</span>
                   </div>
                 </div>
@@ -180,7 +181,7 @@ export default function Connections() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   {match.partner.interests?.slice(0, 3).map((interest: string) => (
                     <Badge key={interest} variant="secondary" className="text-xs">
-                      {interest}
+                      {translateOptionKey(interest)}
                     </Badge>
                   ))}
                 </div>
