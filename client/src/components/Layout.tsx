@@ -29,9 +29,11 @@ import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { translateOptionKeys, translateOptionKey } from "@/lib/profile-options";
+import { useCustomOptions } from "@/hooks/use-custom-options";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   useLocale();
+  useCustomOptions(); // populate custom options cache app-wide
   const [location] = useLocation();
   const { user, logout } = useAuth();
   const { data: profile } = useMyProfile();

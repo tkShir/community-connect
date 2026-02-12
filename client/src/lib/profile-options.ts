@@ -1,4 +1,5 @@
-import { t } from "./i18n";
+import { t, getLocale } from "./i18n";
+import type { CustomOption } from "@shared/schema";
 
 /**
  * Centralized profile option definitions.
@@ -7,114 +8,52 @@ import { t } from "./i18n";
  * Display labels are resolved at render time via the translation system.
  */
 
-export const PROFESSION_KEYS = [
-  "technology",
-  "finance",
-  "consulting",
-  "healthcare",
-  "education",
-  "arts",
-  "engineering",
-  "law",
-  "marketing",
-  "real_estate",
-  "manufacturing",
-  "retail",
-  "media_entertainment",
-  "government",
-  "non_profit",
-  "architecture_design",
-  "hospitality_tourism",
-  "agriculture_food",
-  "logistics_transportation",
-  "energy",
-  "pharmaceutical",
-  "insurance",
-  "telecommunications",
-  "human_resources",
-  "accounting",
-] as const;
+// Re-export key arrays from shared module
+export {
+  PROFESSION_KEYS,
+  GOAL_KEYS,
+  INTEREST_KEYS,
+  HOBBY_KEYS,
+  AGE_RANGE_KEYS,
+  CONTACT_METHOD_KEYS,
+} from "@shared/profile-keys";
 
-export const GOAL_KEYS = [
-  "find_mentor",
-  "find_mentee",
-  "professional_networking",
-  "friendship_social",
-  "activity_partner",
-] as const;
+// ─── Custom option cache ───────────────────────────────────
 
-export const INTEREST_KEYS = [
-  "ai",
-  "startups",
-  "investing",
-  "ux_design",
-  "data_science",
-  "product_management",
-  "growth_hacking",
-  "blockchain",
-  "sustainability",
-  "leadership",
-  "cloud_computing",
-  "cybersecurity",
-  "machine_learning",
-  "digital_marketing",
-  "entrepreneurship",
-  "social_impact",
-  "fintech",
-  "ecommerce",
-  "remote_work",
-  "career_development",
-] as const;
+let _customOptionsCache: CustomOption[] = [];
 
-export const HOBBY_KEYS = [
-  "soccer",
-  "tennis",
-  "reading",
-  "hiking",
-  "cooking",
-  "photography",
-  "traveling",
-  "yoga",
-  "gaming",
-  "painting",
-  "running",
-  "gym_fitness",
-  "music",
-  "movies",
-  "meditation",
-  "surfing",
-  "cycling",
-  "dancing",
-  "crafts_diy",
-  "wine_sake",
-  "camping",
-  "golf",
-  "basketball",
-  "swimming",
-  "gardening",
-] as const;
+/** Called from useCustomOptions to populate the cache. */
+export function setCustomOptionsCache(options: CustomOption[]) {
+  _customOptionsCache = options;
+}
 
-export const AGE_RANGE_KEYS = [
-  "age_below_18",
-  "age_18_22",
-  "age_23_26",
-  "age_27_30",
-  "age_30_34",
-  "age_above_34",
-] as const;
+export function getCustomOptionsCache(): CustomOption[] {
+  return _customOptionsCache;
+}
 
-export const CONTACT_METHOD_KEYS = [
-  "phone",
-  "email",
-  "line",
-] as const;
+/** Get cached custom options for a specific category. */
+export function getCustomOptionsForCategory(category: string): CustomOption[] {
+  return _customOptionsCache.filter((o) => o.category === category);
+}
+
+// ─── Translation helpers ───────────────────────────────────
 
 /** Translate a single profile option key to the current locale label. */
 export function translateOptionKey(key: string): string {
+  // 1. Try predefined translations from locale files
   const translationKey = "onboarding." + key;
   const translated = t(translationKey);
-  // t() returns the full key string when no translation is found
-  return translated === translationKey ? key : translated;
+  if (translated !== translationKey) return translated;
+
+  // 2. Try custom options cache
+  const custom = _customOptionsCache.find((o) => o.originalValue === key);
+  if (custom) {
+    const locale = getLocale();
+    return locale === "en" ? custom.labelEn : custom.labelJa;
+  }
+
+  // 3. Return raw value
+  return key;
 }
 
 /** Translate an array of profile option keys. */
@@ -126,6 +65,17 @@ export function translateOptionKeys(keys: string[]): string[] {
 export function buildOptions(keys: readonly string[]): { key: string; label: string }[] {
   return keys.map((key) => ({ key, label: translateOptionKey(key) }));
 }
+
+/** Build options for custom entries in a category (for TagInput suggestions). */
+export function buildCustomOptions(category: string): { key: string; label: string }[] {
+  const locale = getLocale();
+  return getCustomOptionsForCategory(category).map((o) => ({
+    key: o.originalValue,
+    label: locale === "en" ? o.labelEn : o.labelJa,
+  }));
+}
+
+// ─── Legacy migration ──────────────────────────────────────
 
 /**
  * Reverse mapping: legacy translated values (both EN and JA) → key.

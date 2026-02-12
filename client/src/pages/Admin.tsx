@@ -12,11 +12,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
-import type { Group } from "@shared/schema";
+import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption } from "@/hooks/use-custom-options";
+import type { Group, CustomOption } from "@shared/schema";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey } from "@/lib/profile-options";
@@ -91,7 +92,7 @@ export default function Admin() {
       </header>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-[600px]">
+        <TabsList className="grid w-full grid-cols-4 max-w-[800px]">
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
             {t("admin.users_count", { count: profiles?.length || 0 })}
@@ -103,6 +104,10 @@ export default function Admin() {
           <TabsTrigger value="groups" data-testid="tab-admin-groups">
             <UsersRound className="w-4 h-4 mr-2" />
             {t("admin.groups")}
+          </TabsTrigger>
+          <TabsTrigger value="custom-options" data-testid="tab-admin-custom-options">
+            <Languages className="w-4 h-4 mr-2" />
+            {t("admin.custom_options")}
           </TabsTrigger>
         </TabsList>
 
@@ -194,6 +199,10 @@ export default function Admin() {
 
         <TabsContent value="groups" className="mt-6">
           <GroupsManagement />
+        </TabsContent>
+
+        <TabsContent value="custom-options" className="mt-6">
+          <CustomOptionsManagement />
         </TabsContent>
       </Tabs>
     </div>
@@ -1015,6 +1024,209 @@ function GroupsManagement() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function CustomOptionsManagement() {
+  useLocale();
+  const { toast } = useToast();
+  const { data: customOptions, isLoading } = useAdminCustomOptions();
+  const { mutate: updateOption, isPending: isUpdating } = useUpdateCustomOption();
+  const { mutate: deleteOption, isPending: isDeleting } = useDeleteCustomOption();
+
+  const [edits, setEdits] = useState<Record<number, { labelEn: string; labelJa: string }>>({});
+
+  const startEdit = (opt: CustomOption) => {
+    setEdits((prev) => ({ ...prev, [opt.id]: { labelEn: opt.labelEn, labelJa: opt.labelJa } }));
+  };
+
+  const cancelEdit = (id: number) => {
+    setEdits((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const handleSave = (id: number) => {
+    const edit = edits[id];
+    if (!edit) return;
+    updateOption(
+      { id, data: { labelEn: edit.labelEn, labelJa: edit.labelJa } },
+      {
+        onSuccess: () => {
+          toast({ title: t("admin.custom_option_updated") });
+          cancelEdit(id);
+        },
+        onError: () => toast({ title: t("admin.custom_option_update_failed"), variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleDelete = (id: number) => {
+    deleteOption(id, {
+      onSuccess: () => toast({ title: t("admin.custom_option_deleted") }),
+      onError: () => toast({ title: t("admin.custom_option_delete_failed"), variant: "destructive" }),
+    });
+  };
+
+  const categoryLabel = (cat: string) => {
+    switch (cat) {
+      case "profession": return t("admin.category_profession");
+      case "interests": return t("admin.category_interests");
+      case "hobbies": return t("admin.category_hobbies");
+      default: return cat;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-xl bg-card/50" />
+        ))}
+      </div>
+    );
+  }
+
+  const grouped: Record<string, CustomOption[]> = {};
+  for (const opt of customOptions || []) {
+    if (!grouped[opt.category]) grouped[opt.category] = [];
+    grouped[opt.category].push(opt);
+  }
+
+  const categories = ["profession", "interests", "hobbies"];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold">{t("admin.custom_options_management")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.custom_options_description")}
+        </p>
+      </div>
+
+      {categories.map((cat) => {
+        const options = grouped[cat] || [];
+        return (
+          <div key={cat} className="space-y-3">
+            <h3 className="text-lg font-medium">{categoryLabel(cat)} ({options.length})</h3>
+            {options.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("admin.no_custom_options")}</p>
+            ) : (
+              <div className="grid gap-3">
+                {options.map((opt) => {
+                  const editing = edits[opt.id];
+                  return (
+                    <Card key={opt.id} className="bg-card border-white/10" data-testid={`card-custom-option-${opt.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="font-mono text-sm text-muted-foreground">{t("admin.key")}:</span>{" "}
+                              <span className="font-semibold">{opt.originalValue}</span>
+                            </div>
+                            <div className="flex gap-2">
+                              {!editing && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => startEdit(opt)}
+                                  data-testid={`button-edit-option-${opt.id}`}
+                                >
+                                  <Edit className="w-4 h-4 mr-1" />
+                                  {t("admin.edit")}
+                                </Button>
+                              )}
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDelete(opt.id)}
+                                disabled={isDeleting}
+                                data-testid={`button-delete-option-${opt.id}`}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {editing ? (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <Label className="text-xs">{t("admin.label_en")}</Label>
+                                  <Input
+                                    value={editing.labelEn}
+                                    onChange={(e) =>
+                                      setEdits((prev) => ({
+                                        ...prev,
+                                        [opt.id]: { ...prev[opt.id], labelEn: e.target.value },
+                                      }))
+                                    }
+                                    className="bg-background border-white/10"
+                                    data-testid={`input-label-en-${opt.id}`}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label className="text-xs">{t("admin.label_ja")}</Label>
+                                  <Input
+                                    value={editing.labelJa}
+                                    onChange={(e) =>
+                                      setEdits((prev) => ({
+                                        ...prev,
+                                        [opt.id]: { ...prev[opt.id], labelJa: e.target.value },
+                                      }))
+                                    }
+                                    className="bg-background border-white/10"
+                                    data-testid={`input-label-ja-${opt.id}`}
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex gap-2 justify-end">
+                                <Button size="sm" variant="outline" onClick={() => cancelEdit(opt.id)}>
+                                  {t("admin.cancel")}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSave(opt.id)}
+                                  disabled={isUpdating}
+                                  data-testid={`button-save-option-${opt.id}`}
+                                >
+                                  <Save className="w-4 h-4 mr-1" />
+                                  {isUpdating ? t("admin.saving") : t("admin.save_changes")}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <span className="text-muted-foreground">{t("admin.label_en")}:</span>{" "}
+                                {opt.labelEn}
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">{t("admin.label_ja")}:</span>{" "}
+                                {opt.labelJa}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {(!customOptions || customOptions.length === 0) && (
+        <div className="text-center py-10 text-muted-foreground">
+          {t("admin.no_custom_options_global")}
+        </div>
+      )}
     </div>
   );
 }

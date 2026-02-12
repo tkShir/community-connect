@@ -24,9 +24,11 @@ import {
   AGE_RANGE_KEYS,
   CONTACT_METHOD_KEYS,
   buildOptions,
+  buildCustomOptions,
   migrateToKey,
   migrateArrayToKeys,
 } from "@/lib/profile-options";
+import { useCustomOptions } from "@/hooks/use-custom-options";
 
 const formSchema = insertProfileSchema.extend({
   alias: z.string().min(1, t("onboarding.alias_required")).min(2, t("onboarding.alias_min_length")),
@@ -45,11 +47,12 @@ export default function Onboarding() {
   const { data: existingProfile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
   const [, setLocation] = useLocation();
+  useCustomOptions(); // populate custom options cache
 
-  const professionOptions = buildOptions(PROFESSION_KEYS);
+  const professionOptions = [...buildOptions(PROFESSION_KEYS), ...buildCustomOptions("profession")];
   const goalOptions = buildOptions(GOAL_KEYS);
-  const interestOptions = buildOptions(INTEREST_KEYS);
-  const hobbyOptions = buildOptions(HOBBY_KEYS);
+  const interestOptions = [...buildOptions(INTEREST_KEYS), ...buildCustomOptions("interests")];
+  const hobbyOptions = [...buildOptions(HOBBY_KEYS), ...buildCustomOptions("hobbies")];
   const ageRangeOptions = buildOptions(AGE_RANGE_KEYS);
   const contactMethodOptions = buildOptions(CONTACT_METHOD_KEYS);
 
