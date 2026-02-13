@@ -220,7 +220,17 @@
     "no_submissions": "No submissions yet",
     "no_submissions_message": "You haven't proposed any events. Start by creating one!",
     "schedule": "Schedule",
-    "denial_reason": "Denial Reason"
+    "denial_reason": "Denial Reason",
+    "official_event": "YY Official Event",
+    "member_proposed_event": "YY Member Proposed Event",
+    "proposed_by": "Proposed by {name}",
+    "participate": "Participate",
+    "contact_info_title": "Contact Information",
+    "contact_info_description": "Please use the following contact to participate in this event.",
+    "contact_method_label": "Contact Method",
+    "close": "Close",
+    "google_form_link": "Google Form Link (Optional)",
+    "google_form_link_placeholder": "https://docs.google.com/forms/..."
   },
   "groups": {
     "title_min_length": "Title must be at least 2 characters",
@@ -361,7 +371,12 @@
     "custom_option_updated": "Custom option updated",
     "custom_option_update_failed": "Failed to update custom option",
     "custom_option_deleted": "Custom option deleted",
-    "custom_option_delete_failed": "Failed to delete custom option"
+    "custom_option_delete_failed": "Failed to delete custom option",
+    "google_form_link": "Google Form Link (Optional)",
+    "google_form_link_placeholder": "https://docs.google.com/forms/...",
+    "edit_event": "Edit Event",
+    "event_updated": "Event updated!",
+    "event_update_failed": "Failed to update event"
   },
   "not_found": {
     "page_not_found": "404 Page Not Found",

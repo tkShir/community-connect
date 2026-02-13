@@ -48,6 +48,7 @@ export const events = pgTable("events", {
   eventTime: text("event_time").notNull(),
   location: text("location").notNull(),
   schedule: text("schedule"),
+  googleFormLink: text("google_form_link"),
   status: text("status", { enum: ["draft", "pending_approval", "published", "denied"] }).default("draft").notNull(),
   denialReason: text("denial_reason"),
   creatorId: varchar("creator_id").notNull().references(() => users.id),

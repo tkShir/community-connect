@@ -24,6 +24,7 @@ export const eventInputSchema = insertEventSchema.extend({
   location: z.string().min(1, "Location is required"),
   eventTime: z.string().min(1, "Event time is required"),
   eventDate: z.coerce.date(),
+  googleFormLink: z.string().url().nullable().optional(),
 });
 
 export const eventDenySchema = z.object({

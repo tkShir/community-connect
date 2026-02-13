@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usePublishedEvents, useMyEvents, useCreateEvent } from "@/hooks/use-events";
+import { usePublishedEvents, useMyEvents, useCreateEvent, type EventWithCreator } from "@/hooks/use-events";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Calendar, MapPin, Clock, Plus, CalendarCheck, AlertCircle, Send } from "lucide-react";
+import { Calendar, MapPin, Clock, Plus, CalendarCheck, AlertCircle, Send, UserCheck, Shield, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
@@ -18,6 +18,7 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
+import { translateOptionKey } from "@/lib/profile-options";
 
 const eventFormSchema = z.object({
   title: z
@@ -30,6 +31,7 @@ const eventFormSchema = z.object({
   eventTime: z.string().min(1, t("events.time_required")),
   location: z.string().min(1, t("events.location_required")),
   schedule: z.string().optional(),
+  googleFormLink: z.string().optional(),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -41,6 +43,7 @@ export default function Events() {
   const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [contactDialogEvent, setContactDialogEvent] = useState<EventWithCreator | null>(null);
 
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventFormSchema),
@@ -51,6 +54,7 @@ export default function Events() {
       eventTime: "",
       location: "",
       schedule: "",
+      googleFormLink: "",
     },
   });
 
@@ -60,6 +64,7 @@ export default function Events() {
         ...data,
         eventDate: new Date(data.eventDate),
         schedule: data.schedule || null,
+        googleFormLink: data.googleFormLink || null,
       },
       {
         onSuccess: () => {
@@ -105,6 +110,14 @@ export default function Events() {
         );
       default:
         return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  const handleParticipate = (event: EventWithCreator) => {
+    if (event.googleFormLink) {
+      window.open(event.googleFormLink, "_blank", "noopener,noreferrer");
+    } else {
+      setContactDialogEvent(event);
     }
   };
 
@@ -268,6 +281,25 @@ export default function Events() {
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="googleFormLink"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {t("events.google_form_link")}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder={t("events.google_form_link_placeholder")}
+                          data-testid="input-event-google-form"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <DialogFooter>
                   <Button
                     type="submit"
@@ -326,7 +358,25 @@ export default function Events() {
                     <Card className="hover:border-primary/30 transition-colors" data-testid={`card-event-${event.id}`}>
                       <CardHeader>
                         <div className="flex justify-between items-start gap-4">
-                          <div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 flex-wrap mb-2">
+                              {event.createdByAdmin ? (
+                                <Badge className="bg-blue-600 text-white">
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  {t("events.official_event")}
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-emerald-600 text-white">
+                                  <UserCheck className="w-3 h-3 mr-1" />
+                                  {t("events.member_proposed_event")}
+                                </Badge>
+                              )}
+                              {!event.createdByAdmin && event.creatorAlias && (
+                                <span className="text-sm text-muted-foreground">
+                                  {t("events.proposed_by", { name: event.creatorAlias })}
+                                </span>
+                              )}
+                            </div>
                             <CardTitle className="text-xl">{event.title}</CardTitle>
                             <CardDescription className="mt-2">{event.description}</CardDescription>
                           </div>
@@ -353,6 +403,14 @@ export default function Events() {
                             <pre className="text-sm text-muted-foreground whitespace-pre-wrap">{event.schedule}</pre>
                           </div>
                         )}
+                        <div className="pt-2">
+                          <Button onClick={() => handleParticipate(event)} data-testid={`button-participate-${event.id}`}>
+                            {event.googleFormLink ? (
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                            ) : null}
+                            {t("events.participate")}
+                          </Button>
+                        </div>
                       </CardContent>
                     </Card>
                   </motion.div>
@@ -435,6 +493,33 @@ export default function Events() {
           )}
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!contactDialogEvent} onOpenChange={(open) => !open && setContactDialogEvent(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("events.contact_info_title")}</DialogTitle>
+            <DialogDescription>{t("events.contact_info_description")}</DialogDescription>
+          </DialogHeader>
+          {contactDialogEvent && (
+            <div className="space-y-4">
+              <div className="bg-secondary/30 p-4 rounded-lg space-y-2">
+                <p className="text-sm font-medium">{t("events.contact_method_label")}</p>
+                <p className="text-sm text-muted-foreground">
+                  {translateOptionKey(contactDialogEvent.creatorContactMethod || "")}
+                </p>
+                <p className="text-lg font-semibold">
+                  {contactDialogEvent.creatorContactValue}
+                </p>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setContactDialogEvent(null)}>
+                  {t("events.close")}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

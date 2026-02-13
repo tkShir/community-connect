@@ -239,10 +239,10 @@ export async function registerRoutes(
 
   // === Events Routes ===
 
-  // Get all published events (public)
+  // Get all published events (public) - returns enriched data with creator info
   app.get(api.events.published.path, async (req, res) => {
     if (!isAuthed(req)) return res.sendStatus(401);
-    const events = await storage.getPublishedEvents();
+    const events = await storage.getPublishedEventsWithCreator();
     res.json(events);
   });
 
