@@ -78,6 +78,16 @@ export const groups = pgTable("groups", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  category: text("category", { enum: ["board", "software", "other"] }).notNull(),
+  message: text("message").notNull(),
+  name: text("name"),
+  email: text("email"),
+  userId: varchar("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // === RELATIONS ===
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
@@ -130,6 +140,13 @@ export const groupsRelations = relations(groups, ({ one }) => ({
   }),
 }));
 
+export const feedbackRelations = relations(feedback, ({ one }) => ({
+  user: one(users, {
+    fields: [feedback.userId],
+    references: [users.id],
+  }),
+}));
+
 // === BASE SCHEMAS ===
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({ id: true, userId: true });
@@ -138,6 +155,7 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
 export const insertEventSchema = createInsertSchema(events).omit({ id: true, createdAt: true, updatedAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
 export const insertCustomOptionSchema = createInsertSchema(customOptions).omit({ id: true, createdAt: true });
+export const insertFeedbackSchema = createInsertSchema(feedback).omit({ id: true, createdAt: true, userId: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -157,6 +175,9 @@ export type InsertGroup = z.infer<typeof insertGroupSchema>;
 
 export type CustomOption = typeof customOptions.$inferSelect;
 export type InsertCustomOption = z.infer<typeof insertCustomOptionSchema>;
+
+export type Feedback = typeof feedback.$inferSelect;
+export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 
 export type MatchWithProfile = Match & {
   partnerProfile: Profile;

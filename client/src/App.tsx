@@ -17,6 +17,7 @@ import Profile from "@/pages/Profile";
 import Events from "@/pages/Events";
 import Groups from "@/pages/Groups";
 import Admin from "@/pages/Admin";
+import Feedback from "@/pages/Feedback";
 import NotFound from "@/pages/not-found";
 import Layout from "@/components/Layout";
 
@@ -65,6 +66,7 @@ function Router() {
       <Route path="/events" component={() => <ProtectedRoute component={Events} />} />
       <Route path="/groups" component={() => <ProtectedRoute component={Groups} />} />
       <Route path="/admin" component={() => <ProtectedRoute component={Admin} />} />
+      <Route path="/feedback" component={() => <ProtectedRoute component={Feedback} />} />
       <Route component={NotFound} />
     </Switch>
   );

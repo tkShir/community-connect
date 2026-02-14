@@ -14,6 +14,7 @@ import {
   Shield,
   Calendar,
   UsersRound,
+  MessageSquare,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { href: "/events", label: t("layout.events"), icon: Calendar },
     { href: "/groups", label: t("layout.groups"), icon: UsersRound },
     { href: "/profile", label: t("layout.my_profile"), icon: UserCircle },
+    { href: "/feedback", label: t("layout.feedback"), icon: MessageSquare },
     ...(profile?.isAdmin ? [{ href: "/admin", label: t("layout.admin"), icon: Shield }] : []),
   ];
 
