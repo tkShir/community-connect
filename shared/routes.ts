@@ -114,7 +114,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/matches',
       responses: {
-        200: z.array(z.custom<typeof matches.$inferSelect & { partner: typeof profiles.$inferSelect }>()),
+        200: z.array(z.custom<typeof matches.$inferSelect & { partnerProfile: typeof profiles.$inferSelect }>()),
       },
     },
     create: {
