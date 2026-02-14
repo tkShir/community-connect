@@ -2,8 +2,15 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Event, InsertEvent } from "@shared/schema";
 
+export type EventWithCreator = Event & {
+  creatorAlias: string | null;
+  creatorContactMethod: string | null;
+  creatorContactValue: string | null;
+  creatorIsAdmin: boolean;
+};
+
 export function usePublishedEvents() {
-  return useQuery<Event[]>({
+  return useQuery<EventWithCreator[]>({
     queryKey: ["/api/events"],
   });
 }

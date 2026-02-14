@@ -348,11 +348,13 @@ function EventsManagement() {
   const { mutate: denyEvent, isPending: isDenying } = useDenyEvent();
   const { mutate: deleteEvent, isPending: isDeleting } = useDeleteEvent();
   const { mutate: createEvent, isPending: isCreating } = useCreateEvent();
+  const { mutate: updateEvent, isPending: isUpdating } = useUpdateEvent();
 
   const [denyDialogOpen, setDenyDialogOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [denyReason, setDenyReason] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [newEvent, setNewEvent] = useState({
     title: "",
     description: "",
@@ -360,6 +362,7 @@ function EventsManagement() {
     eventTime: "",
     location: "",
     schedule: "",
+    googleFormLink: "",
   });
 
   const handleApprove = (id: number) => {
@@ -405,14 +408,40 @@ function EventsManagement() {
         ...newEvent,
         eventDate: new Date(newEvent.eventDate),
         schedule: newEvent.schedule || null,
+        googleFormLink: newEvent.googleFormLink || null,
       },
       {
         onSuccess: () => {
           toast({ title: t("admin.event_created") });
           setCreateDialogOpen(false);
-          setNewEvent({ title: "", description: "", eventDate: "", eventTime: "", location: "", schedule: "" });
+          setNewEvent({ title: "", description: "", eventDate: "", eventTime: "", location: "", schedule: "", googleFormLink: "" });
         },
         onError: () => toast({ title: t("admin.event_create_failed"), variant: "destructive" }),
+      }
+    );
+  };
+
+  const handleEditSave = () => {
+    if (!editingEvent) return;
+    updateEvent(
+      {
+        id: editingEvent.id,
+        data: {
+          title: editingEvent.title,
+          description: editingEvent.description,
+          eventDate: editingEvent.eventDate,
+          eventTime: editingEvent.eventTime,
+          location: editingEvent.location,
+          schedule: editingEvent.schedule,
+          googleFormLink: editingEvent.googleFormLink,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({ title: t("admin.event_updated") });
+          setEditingEvent(null);
+        },
+        onError: () => toast({ title: t("admin.event_update_failed"), variant: "destructive" }),
       }
     );
   };
@@ -526,6 +555,15 @@ function EventsManagement() {
                   data-testid="input-admin-event-schedule"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>{t("admin.google_form_link")}</Label>
+                <Input
+                  value={newEvent.googleFormLink}
+                  onChange={(e) => setNewEvent({ ...newEvent, googleFormLink: e.target.value })}
+                  placeholder={t("admin.google_form_link_placeholder")}
+                  data-testid="input-admin-event-google-form"
+                />
+              </div>
               <DialogFooter>
                 <Button type="submit" disabled={isCreating} data-testid="button-admin-submit-event">
                   {isCreating ? t("admin.creating") : t("admin.create_and_publish")}
@@ -623,20 +661,118 @@ function EventsManagement() {
                         <MapPin className="w-3 h-3" /> {event.location}
                       </span>
                     </div>
+                    {event.googleFormLink && (
+                      <div className="flex items-center gap-1 text-xs text-primary mt-1">
+                        <LinkIcon className="w-3 h-3" />
+                        <span className="truncate max-w-[300px]">{event.googleFormLink}</span>
+                      </div>
+                    )}
                     {event.status === "denied" && event.denialReason && (
                       <p className="text-xs text-destructive mt-2">{t("admin.denial_reason_display", { reason: event.denialReason })}</p>
                     )}
                   </div>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(event.id)}
-                    disabled={isDeleting}
-                    data-testid={`button-delete-event-${event.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <div className="flex gap-2">
+                    <Dialog open={editingEvent?.id === event.id} onOpenChange={(open) => !open && setEditingEvent(null)}>
+                      <DialogTrigger asChild>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => setEditingEvent({ ...event })}
+                          data-testid={`button-edit-event-${event.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                          <DialogTitle>{t("admin.edit_event")}</DialogTitle>
+                        </DialogHeader>
+                        {editingEvent && (
+                          <div className="space-y-4">
+                            <div className="space-y-2">
+                              <Label>{t("admin.title")}</Label>
+                              <Input
+                                value={editingEvent.title}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, title: e.target.value })}
+                                data-testid="input-edit-event-title"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("events.description")}</Label>
+                              <Textarea
+                                value={editingEvent.description}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, description: e.target.value })}
+                                data-testid="input-edit-event-description"
+                              />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>{t("events.date")}</Label>
+                                <Input
+                                  type="date"
+                                  value={editingEvent.eventDate ? new Date(editingEvent.eventDate).toISOString().split("T")[0] : ""}
+                                  onChange={(e) => setEditingEvent({ ...editingEvent, eventDate: new Date(e.target.value) })}
+                                  data-testid="input-edit-event-date"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>{t("events.time")}</Label>
+                                <Input
+                                  type="time"
+                                  value={editingEvent.eventTime}
+                                  onChange={(e) => setEditingEvent({ ...editingEvent, eventTime: e.target.value })}
+                                  data-testid="input-edit-event-time"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("events.location")}</Label>
+                              <Input
+                                value={editingEvent.location}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, location: e.target.value })}
+                                data-testid="input-edit-event-location"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("events.schedule_optional")}</Label>
+                              <Textarea
+                                value={editingEvent.schedule || ""}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, schedule: e.target.value })}
+                                data-testid="input-edit-event-schedule"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>{t("admin.google_form_link")}</Label>
+                              <Input
+                                value={editingEvent.googleFormLink || ""}
+                                onChange={(e) => setEditingEvent({ ...editingEvent, googleFormLink: e.target.value || null })}
+                                placeholder={t("admin.google_form_link_placeholder")}
+                                data-testid="input-edit-event-google-form"
+                              />
+                            </div>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setEditingEvent(null)}>
+                                {t("admin.cancel")}
+                              </Button>
+                              <Button onClick={handleEditSave} disabled={isUpdating} data-testid="button-save-event">
+                                {isUpdating ? t("admin.saving") : t("admin.save_changes")}
+                              </Button>
+                            </DialogFooter>
+                          </div>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => handleDelete(event.id)}
+                      disabled={isDeleting}
+                      data-testid={`button-delete-event-${event.id}`}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

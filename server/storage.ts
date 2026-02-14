@@ -12,6 +12,13 @@ import {
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
 import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
 
+export type EventWithCreator = Event & {
+  creatorAlias: string | null;
+  creatorContactMethod: string | null;
+  creatorContactValue: string | null;
+  creatorIsAdmin: boolean;
+};
+
 export interface IStorage {
   // Profiles
   getProfile(id: number): Promise<Profile | undefined>;
@@ -39,6 +46,7 @@ export interface IStorage {
   getEvent(id: number): Promise<Event | undefined>;
   updateEvent(id: number, event: Partial<InsertEvent>): Promise<Event | undefined>;
   getPublishedEvents(): Promise<Event[]>;
+  getPublishedEventsWithCreator(): Promise<EventWithCreator[]>;
   getPendingEvents(): Promise<Event[]>;
   getAllEvents(): Promise<Event[]>;
   getUserEvents(userId: string): Promise<Event[]>;
@@ -259,6 +267,31 @@ export class DatabaseStorage implements IStorage {
 
   async getPublishedEvents(): Promise<Event[]> {
     return await db.select().from(events).where(eq(events.status, "published")).orderBy(desc(events.eventDate));
+  }
+
+  async getPublishedEventsWithCreator(): Promise<EventWithCreator[]> {
+    const publishedEvents = await db.select().from(events).where(eq(events.status, "published")).orderBy(desc(events.eventDate));
+
+    // Batch fetch unique creator profiles
+    const creatorIds = Array.from(new Set(publishedEvents.map(e => e.creatorId)));
+    const creatorProfiles = new Map<string, Profile>();
+    for (const userId of creatorIds) {
+      const profile = await this.getProfileByUserId(userId);
+      if (profile) creatorProfiles.set(userId, profile);
+    }
+
+    const adminContactEmail = process.env.ADMIN_CONTACT_EMAIL || "admin@yykai.com";
+
+    return publishedEvents.map(event => {
+      const creatorProfile = creatorProfiles.get(event.creatorId);
+      return {
+        ...event,
+        creatorAlias: creatorProfile?.alias || null,
+        creatorContactMethod: event.createdByAdmin ? "email" : (creatorProfile?.contactMethod || null),
+        creatorContactValue: event.createdByAdmin ? adminContactEmail : (creatorProfile?.contactValue || null),
+        creatorIsAdmin: creatorProfile?.isAdmin || false,
+      };
+    });
   }
 
   async getPendingEvents(): Promise<Event[]> {

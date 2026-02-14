@@ -220,7 +220,17 @@
     "no_submissions": "まだ申請はありません",
     "no_submissions_message": "まだイベントを提案していません。まずは作成してみましょう！",
     "schedule": "タイムテーブル",
-    "denial_reason": "却下理由"
+    "denial_reason": "却下理由",
+    "official_event": "YY会公式イベント",
+    "member_proposed_event": "YY会メンバー提案イベント",
+    "proposed_by": "提案者：{name}",
+    "participate": "参加する",
+    "contact_info_title": "連絡先情報",
+    "contact_info_description": "このイベントに参加するには、以下の連絡先をご利用ください。",
+    "contact_method_label": "連絡方法",
+    "close": "閉じる",
+    "google_form_link": "Google Formリンク（任意）",
+    "google_form_link_placeholder": "https://docs.google.com/forms/..."
   },
   "groups": {
     "title_min_length": "タイトルは2文字以上で入力してください",
@@ -361,20 +371,7 @@
     "custom_option_updated": "カスタム選択肢を更新しました",
     "custom_option_update_failed": "カスタム選択肢の更新に失敗しました",
     "custom_option_deleted": "カスタム選択肢を削除しました",
-    "custom_option_delete_failed": "カスタム選択肢の削除に失敗しました",
-    "feedback": "フィードバック",
-    "feedback_management": "フィードバック管理",
-    "feedback_description": "コミュニティメンバーから送信されたフィードバックを確認・管理します。",
-    "feedback_count": "フィードバック {count} 件",
-    "no_feedback": "まだフィードバックはありません。",
-    "feedback_deleted": "フィードバックを削除しました",
-    "feedback_delete_failed": "フィードバックの削除に失敗しました",
-    "feedback_category_board": "YY会理事会",
-    "feedback_category_software": "ソフトウェア",
-    "feedback_category_other": "その他",
-    "feedback_from": "送信者：{name}",
-    "feedback_email": "メール：{email}",
-    "feedback_anonymous": "匿名"
+    "custom_option_delete_failed": "カスタム選択肢の削除に失敗しました"
   },
   "not_found": {
     "page_not_found": "404 ページが見つかりません",
