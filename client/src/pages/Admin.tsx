@@ -12,12 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
 import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption } from "@/hooks/use-custom-options";
-import type { Group, CustomOption } from "@shared/schema";
+import { useAdminFeedback, useDeleteFeedback } from "@/hooks/use-feedback";
+import type { Group, CustomOption, Feedback } from "@shared/schema";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey } from "@/lib/profile-options";
@@ -92,7 +93,7 @@ export default function Admin() {
       </header>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 max-w-[800px]">
+        <TabsList className="grid w-full grid-cols-5 max-w-[900px]">
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
             {t("admin.users_count", { count: profiles?.length || 0 })}
@@ -104,6 +105,10 @@ export default function Admin() {
           <TabsTrigger value="groups" data-testid="tab-admin-groups">
             <UsersRound className="w-4 h-4 mr-2" />
             {t("admin.groups")}
+          </TabsTrigger>
+          <TabsTrigger value="feedback" data-testid="tab-admin-feedback">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            {t("admin.feedback")}
           </TabsTrigger>
           <TabsTrigger value="custom-options" data-testid="tab-admin-custom-options">
             <Languages className="w-4 h-4 mr-2" />
@@ -199,6 +204,10 @@ export default function Admin() {
 
         <TabsContent value="groups" className="mt-6">
           <GroupsManagement />
+        </TabsContent>
+
+        <TabsContent value="feedback" className="mt-6">
+          <FeedbackManagement />
         </TabsContent>
 
         <TabsContent value="custom-options" className="mt-6">
@@ -1361,6 +1370,112 @@ function CustomOptionsManagement() {
       {(!customOptions || customOptions.length === 0) && (
         <div className="text-center py-10 text-muted-foreground">
           {t("admin.no_custom_options_global")}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FeedbackManagement() {
+  useLocale();
+  const { toast } = useToast();
+  const { data: allFeedback, isLoading } = useAdminFeedback();
+  const { mutate: deleteFeedback, isPending: isDeleting } = useDeleteFeedback();
+
+  const handleDelete = (id: number) => {
+    deleteFeedback(id, {
+      onSuccess: () => toast({ title: t("admin.feedback_deleted") }),
+      onError: () => toast({ title: t("admin.feedback_delete_failed"), variant: "destructive" }),
+    });
+  };
+
+  const getCategoryBadge = (category: string) => {
+    switch (category) {
+      case "board":
+        return <Badge className="bg-blue-600 text-white">{t("admin.feedback_category_board")}</Badge>;
+      case "software":
+        return <Badge className="bg-purple-600 text-white">{t("admin.feedback_category_software")}</Badge>;
+      case "other":
+        return <Badge variant="secondary">{t("admin.feedback_category_other")}</Badge>;
+      default:
+        return <Badge variant="secondary">{category}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24 w-full rounded-xl bg-card/50" />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold">{t("admin.feedback_management")}</h2>
+        <p className="text-sm text-muted-foreground">
+          {t("admin.feedback_description")}
+        </p>
+        <p className="text-sm text-muted-foreground mt-1">
+          {t("admin.feedback_count", { count: allFeedback?.length || 0 })}
+        </p>
+      </div>
+
+      {allFeedback?.length === 0 ? (
+        <div className="text-center py-10 text-muted-foreground">
+          {t("admin.no_feedback")}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {allFeedback?.map((fb) => (
+            <Card key={fb.id} className="bg-card border-white/10" data-testid={`card-feedback-${fb.id}`}>
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {getCategoryBadge(fb.category)}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(fb.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-sm whitespace-pre-wrap">{fb.message}</p>
+                    <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                      {fb.name ? (
+                        <span className="flex items-center gap-1">
+                          <UserCircle className="w-3 h-3" />
+                          {t("admin.feedback_from", { name: fb.name })}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1">
+                          <UserCircle className="w-3 h-3" />
+                          {t("admin.feedback_anonymous")}
+                        </span>
+                      )}
+                      {fb.email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          {t("admin.feedback_email", { email: fb.email })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(fb.id)}
+                    disabled={isDeleting}
+                    data-testid={`button-delete-feedback-${fb.id}`}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
     </div>

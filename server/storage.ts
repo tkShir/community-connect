@@ -1,12 +1,13 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications, events, groups, customOptions,
+  profiles, matches, notifications, events, groups, customOptions, feedback,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
   type MatchWithProfile,
   type Event, type InsertEvent,
   type Group, type InsertGroup,
   type CustomOption,
+  type Feedback, type InsertFeedback,
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
 import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
@@ -59,6 +60,11 @@ export interface IStorage {
   updateCustomOption(id: number, update: { labelEn?: string; labelJa?: string }): Promise<CustomOption | undefined>;
   deleteCustomOption(id: number): Promise<void>;
   registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void>;
+
+  // Feedback
+  createFeedback(feedbackData: InsertFeedback, userId?: string): Promise<Feedback>;
+  getAllFeedback(): Promise<Feedback[]>;
+  deleteFeedback(id: number): Promise<void>;
 
   // Groups
   createGroup(group: InsertGroup, creatorId: string, createdByAdmin: boolean): Promise<Group>;
@@ -363,6 +369,24 @@ export class DatabaseStorage implements IStorage {
 
   async deleteGroup(id: number): Promise<void> {
     await db.delete(groups).where(eq(groups.id, id));
+  }
+
+  // === Feedback ===
+
+  async createFeedback(feedbackData: InsertFeedback, userId?: string): Promise<Feedback> {
+    const [created] = await db.insert(feedback).values({
+      ...feedbackData,
+      userId: userId || null,
+    }).returning();
+    return created;
+  }
+
+  async getAllFeedback(): Promise<Feedback[]> {
+    return await db.select().from(feedback).orderBy(desc(feedback.createdAt));
+  }
+
+  async deleteFeedback(id: number): Promise<void> {
+    await db.delete(feedback).where(eq(feedback.id, id));
   }
 
   // === Custom Options ===

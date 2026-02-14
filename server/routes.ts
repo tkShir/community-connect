@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema, customOptionUpdateSchema } from "@shared/routes";
+import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema, customOptionUpdateSchema, feedbackInputSchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
@@ -538,6 +538,59 @@ export async function registerRoutes(
     try {
       const groupId = Number(req.params.id);
       await storage.deleteGroup(groupId);
+      res.json({ success: true });
+    } catch (err) {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Feedback ===
+
+  app.post(api.feedback.create.path, async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+
+    try {
+      const input = feedbackInputSchema.parse(req.body);
+      const created = await storage.createFeedback(input, userId);
+      res.status(201).json(created);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
+    }
+  });
+
+  // Admin: Get all feedback
+  app.get("/api/admin/feedback", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const allFeedback = await storage.getAllFeedback();
+      res.json(allFeedback);
+    } catch (err) {
+      console.warn("Failed to fetch feedback (table may not exist yet):", err);
+      res.json([]);
+    }
+  });
+
+  // Admin: Delete feedback
+  app.delete("/api/admin/feedback/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const feedbackId = Number(req.params.id);
+      await storage.deleteFeedback(feedbackId);
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });

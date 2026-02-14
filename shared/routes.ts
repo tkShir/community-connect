@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, profiles, matches, notifications, events, groups, customOptions } from './schema';
+import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, insertFeedbackSchema, profiles, matches, notifications, events, groups, customOptions, feedback } from './schema';
 
 export const profileInputSchema = insertProfileSchema.extend({
   alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
@@ -43,6 +43,13 @@ export const groupDenySchema = z.object({
 export const customOptionUpdateSchema = z.object({
   labelEn: z.string().min(1).optional(),
   labelJa: z.string().min(1).optional(),
+});
+
+export const feedbackInputSchema = insertFeedbackSchema.extend({
+  category: z.enum(["board", "software", "other"]),
+  message: z.string().min(1, "Message is required"),
+  name: z.string().nullable().optional(),
+  email: z.string().email().nullable().optional().or(z.literal("").transform(() => null)),
 });
 
 // ============================================
@@ -215,6 +222,17 @@ export const api = {
       input: groupInputSchema,
       responses: {
         201: z.custom<typeof groups.$inferSelect>(),
+        400: errorSchemas.validation,
+      },
+    },
+  },
+  feedback: {
+    create: {
+      method: 'POST' as const,
+      path: '/api/feedback',
+      input: feedbackInputSchema,
+      responses: {
+        201: z.custom<typeof feedback.$inferSelect>(),
         400: errorSchemas.validation,
       },
     },
