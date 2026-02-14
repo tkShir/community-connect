@@ -60,6 +60,21 @@ services:
           psql "$$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS _init_marker (id int primary key); INSERT INTO _init_marker (id) VALUES (1) ON CONFLICT DO NOTHING;"
         fi
     restart: "no"
-
+  app:
+      build:
+        context: .
+        dockerfile: Dockerfile.web
+      environment:
+        NODE_ENV: production
+        DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-onyx}
+        PORT: 3000
+      depends_on:
+        db:
+          condition: service_healthy
+        db-init:
+          condition: service_completed_successfully
+      ports:
+        - "8080:3000"
+      restart: unless-stopped
 volumes:
   db-store:
