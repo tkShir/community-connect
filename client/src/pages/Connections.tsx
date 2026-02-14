@@ -23,12 +23,15 @@ export default function Connections() {
     );
   }
 
+  console.log("matches")
+  console.log(matches)
+
   const pendingRequests = matches?.filter(
-    (m) => m.status === "pending" && m.initiatorId === m.partner.id
+    (m) => m.status === "pending" && m.initiatorId === m.partnerProfile.id
   ) || [];
   const acceptedConnections = matches?.filter((m) => m.status === "accepted") || [];
   const sentRequests = matches?.filter(
-    (m) => m.status === "pending" && m.initiatorId !== m.partner.id
+    (m) => m.status === "pending" && m.initiatorId !== m.partnerProfile.id
   ) || [];
 
   const getContactIcon = (method: string) => {
@@ -65,15 +68,15 @@ export default function Connections() {
               <CardContent className="p-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary font-bold">
-                    {match.partner.alias.substring(0, 2).toUpperCase()}
+                    {match.partnerProfile.alias.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <h3 className="font-bold">{match.partner.alias}</h3>
+                    <h3 className="font-bold">{match.partnerProfile.alias}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {Array.isArray(match.partner.profession) ? translateOptionKeys(match.partner.profession).join(", ") : translateOptionKey(match.partner.profession)}
+                      {Array.isArray(match.partnerProfile.profession) ? translateOptionKeys(match.partnerProfile.profession).join(", ") : translateOptionKey(match.partnerProfile.profession)}
                     </p>
                     <div className="flex flex-wrap gap-1 mt-1">
-                      {(Array.isArray(match.partner.goal) ? match.partner.goal : [match.partner.goal]).slice(0, 2).map((g: string) => (
+                      {(Array.isArray(match.partnerProfile.goal) ? match.partnerProfile.goal : [match.partnerProfile.goal]).slice(0, 2).map((g: string) => (
                         <Badge key={g} variant="outline" className="text-xs">
                           {translateOptionKey(g)}
                         </Badge>
@@ -116,12 +119,12 @@ export default function Connections() {
             <Card key={match.id} className="bg-card/50 border-white/5">
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center text-muted-foreground font-bold">
-                  {match.partner.alias.substring(0, 2).toUpperCase()}
+                  {match.partnerProfile.alias.substring(0, 2).toUpperCase()}
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold">{match.partner.alias}</h3>
+                  <h3 className="font-bold">{match.partnerProfile.alias}</h3>
                   <p className="text-sm text-muted-foreground">
-                    {Array.isArray(match.partner.profession) ? translateOptionKeys(match.partner.profession).join(", ") : translateOptionKey(match.partner.profession)}
+                    {Array.isArray(match.partnerProfile.profession) ? translateOptionKeys(match.partnerProfile.profession).join(", ") : translateOptionKey(match.partnerProfile.profession)}
                   </p>
                 </div>
                 <Badge variant="secondary" className="text-xs">
@@ -155,15 +158,15 @@ export default function Connections() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center text-primary-foreground text-xl font-bold">
-                      {match.partner.alias.substring(0, 2).toUpperCase()}
+                      {match.partnerProfile.alias.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold">{match.partner.alias}</h3>
+                      <h3 className="text-lg font-bold">{match.partnerProfile.alias}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {Array.isArray(match.partner.profession) ? translateOptionKeys(match.partner.profession).join(", ") : translateOptionKey(match.partner.profession)}
+                        {Array.isArray(match.partnerProfile.profession) ? translateOptionKeys(match.partnerProfile.profession).join(", ") : translateOptionKey(match.partnerProfile.profession)}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {translateOptionKey(match.partner.ageRange)}
+                        {translateOptionKey(match.partnerProfile.ageRange)}
                       </p>
                     </div>
                   </div>
@@ -172,14 +175,14 @@ export default function Connections() {
 
                 <div className="mt-4 pt-4 border-t border-white/5">
                   <div className="flex items-center gap-2 text-sm">
-                    {getContactIcon(match.partner.contactMethod)}
-                    <span className="text-muted-foreground">{translateOptionKey(match.partner.contactMethod)}:</span>
-                    <span className="font-medium text-primary">{match.partner.contactValue}</span>
+                    {getContactIcon(match.partnerProfile.contactMethod)}
+                    <span className="text-muted-foreground">{translateOptionKey(match.partnerProfile.contactMethod)}:</span>
+                    <span className="font-medium text-primary">{match.partnerProfile.contactValue}</span>
                   </div>
                 </div>
 
                 <div className="mt-4 flex flex-wrap gap-2">
-                  {match.partner.interests?.slice(0, 3).map((interest: string) => (
+                  {match.partnerProfile.interests?.slice(0, 3).map((interest: string) => (
                     <Badge key={interest} variant="secondary" className="text-xs">
                       {translateOptionKey(interest)}
                     </Badge>

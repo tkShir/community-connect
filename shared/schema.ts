@@ -159,5 +159,5 @@ export type CustomOption = typeof customOptions.$inferSelect;
 export type InsertCustomOption = z.infer<typeof insertCustomOptionSchema>;
 
 export type MatchWithProfile = Match & {
-  partnerProfile: Profile;
+  partner: Profile;
 };
