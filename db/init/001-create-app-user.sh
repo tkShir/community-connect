@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-PGOPTIONS="-c app.app_user=$APP_USER -c app.app_pass=$APP_PASS" \
+PGOPTIONS="-c app.app_user=$APP_DB_USER -c app.app_pass=$APP_DB_PASSWORD" \
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'SQL'
 DO $$
 BEGIN
