@@ -1,4 +1,4 @@
-FROM postgres:16
+FROM postgres:14
 
 # Install locales + tzdata and generate ja_JP.UTF-8
 RUN apt-get update \
