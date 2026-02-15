@@ -1,4 +1,6 @@
 .env
+.env.prod
+redacted.env
 node_modules
 dist
 .DS_Store

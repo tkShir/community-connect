@@ -1,0 +1,13 @@
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  app:
+    # Optional but convenient: direct access to app without Caddy for debugging.
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  caddy:
+    volumes:
+      - ./Caddyfile.dev:/etc/caddy/Caddyfile:ro

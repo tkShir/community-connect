@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: Dockerfile.postgres
     container_name: community_connect_db
-    ports:
-      - "127.0.0.1:5432:5432"
+    # NOTE: no host port publishing in base (security + portability).
+    # Dev override will publish 127.0.0.1:5432 if you want it.
     volumes:
       - db-store:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
@@ -65,6 +65,7 @@ services:
           psql "$$DATABASE_URL" -c "CREATE TABLE IF NOT EXISTS _init_marker (id int primary key); INSERT INTO _init_marker (id) VALUES (1) ON CONFLICT DO NOTHING;"
         fi
     restart: "no"
+
   app:
     build:
       context: .
@@ -88,6 +89,7 @@ services:
     expose:
       - "3000"
     restart: unless-stopped
+
   caddy:
     image: caddy:2
     container_name: community_connect_caddy
@@ -96,11 +98,12 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    # Caddyfile is provided by overrides (dev/prod) so base stays clean.
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     restart: unless-stopped
+
 volumes:
   db-store:
   caddy-data:
