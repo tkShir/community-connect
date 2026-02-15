@@ -1,7 +1,7 @@
 import type { Express, Request } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema, customOptionUpdateSchema, feedbackInputSchema } from "@shared/routes";
+import { api, adminProfileUpdateSchema, eventInputSchema, eventDenySchema, groupInputSchema, groupDenySchema, customOptionUpdateSchema, feedbackInputSchema, officialContentUpdateSchema } from "@shared/routes";
 import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
@@ -541,6 +541,42 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Official Content ===
+
+  app.get(api.official.list.path, async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    try {
+      const content = await storage.getOfficialContent();
+      res.json(content);
+    } catch (err) {
+      console.warn("Failed to fetch official content (table may not exist yet):", err);
+      res.json([]);
+    }
+  });
+
+  app.put(api.official.update.path, async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+
+    try {
+      const { value } = officialContentUpdateSchema.parse(req.body);
+      const key = req.params.key as string;
+      const updated = await storage.upsertOfficialContent(key, value);
+      res.json(updated);
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        res.status(400).json({ message: err.errors[0].message });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
   });
 

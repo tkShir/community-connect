@@ -1,6 +1,6 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications, events, groups, customOptions, feedback,
+  profiles, matches, notifications, events, groups, customOptions, feedback, officialContent,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
   type MatchWithProfile,
@@ -8,6 +8,7 @@ import {
   type Group, type InsertGroup,
   type CustomOption,
   type Feedback, type InsertFeedback,
+  type OfficialContent,
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
 import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
@@ -65,6 +66,11 @@ export interface IStorage {
   createFeedback(feedbackData: InsertFeedback, userId?: string): Promise<Feedback>;
   getAllFeedback(): Promise<Feedback[]>;
   deleteFeedback(id: number): Promise<void>;
+
+  // Official Content
+  getOfficialContent(): Promise<OfficialContent[]>;
+  getOfficialContentByKey(key: string): Promise<OfficialContent | undefined>;
+  upsertOfficialContent(key: string, value: string): Promise<OfficialContent>;
 
   // Groups
   createGroup(group: InsertGroup, creatorId: string, createdByAdmin: boolean): Promise<Group>;
@@ -406,6 +412,33 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCustomOption(id: number): Promise<void> {
     await db.delete(customOptions).where(eq(customOptions.id, id));
+  }
+
+  // === Official Content ===
+
+  async getOfficialContent(): Promise<OfficialContent[]> {
+    return await db.select().from(officialContent);
+  }
+
+  async getOfficialContentByKey(key: string): Promise<OfficialContent | undefined> {
+    const [content] = await db.select().from(officialContent).where(eq(officialContent.key, key));
+    return content;
+  }
+
+  async upsertOfficialContent(key: string, value: string): Promise<OfficialContent> {
+    const existing = await this.getOfficialContentByKey(key);
+    if (existing) {
+      const [updated] = await db.update(officialContent)
+        .set({ value, updatedAt: new Date() })
+        .where(eq(officialContent.key, key))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(officialContent)
+        .values({ key, value })
+        .returning();
+      return created;
+    }
   }
 
   async registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void> {

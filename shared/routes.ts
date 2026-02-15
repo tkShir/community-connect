@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, insertFeedbackSchema, profiles, matches, notifications, events, groups, customOptions, feedback } from './schema';
+import { insertProfileSchema, insertMatchSchema, insertEventSchema, insertGroupSchema, insertFeedbackSchema, profiles, matches, notifications, events, groups, customOptions, feedback, officialContent } from './schema';
 
 export const profileInputSchema = insertProfileSchema.extend({
   alias: z.string().min(1, "Alias is required").min(2, "Alias must be at least 2 characters"),
@@ -43,6 +43,10 @@ export const groupDenySchema = z.object({
 export const customOptionUpdateSchema = z.object({
   labelEn: z.string().min(1).optional(),
   labelJa: z.string().min(1).optional(),
+});
+
+export const officialContentUpdateSchema = z.object({
+  value: z.string(),
 });
 
 export const feedbackInputSchema = insertFeedbackSchema.extend({
@@ -223,6 +227,24 @@ export const api = {
       responses: {
         201: z.custom<typeof groups.$inferSelect>(),
         400: errorSchemas.validation,
+      },
+    },
+  },
+  official: {
+    list: {
+      method: 'GET' as const,
+      path: '/api/official',
+      responses: {
+        200: z.array(z.custom<typeof officialContent.$inferSelect>()),
+      },
+    },
+    update: {
+      method: 'PUT' as const,
+      path: '/api/official/:key',
+      input: officialContentUpdateSchema,
+      responses: {
+        200: z.custom<typeof officialContent.$inferSelect>(),
+        403: errorSchemas.unauthorized,
       },
     },
   },
