@@ -82,8 +82,23 @@ services:
         condition: service_healthy
       db-init:
         condition: service_completed_successfully
+    expose:
+      - "3000"
+    restart: unless-stopped
+  caddy:
+    image: caddy:2
+    container_name: community_connect_caddy
+    depends_on:
+      - app
     ports:
-      - "8080:3000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
     restart: unless-stopped
 volumes:
   db-store:
+  caddy-data:
+  caddy-config:

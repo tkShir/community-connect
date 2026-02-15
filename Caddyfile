@@ -1,0 +1,4 @@
+yyapp.castle-field.com {
+  encode gzip
+  reverse_proxy app:3000
+}
