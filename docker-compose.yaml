@@ -8,9 +8,12 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - db-store:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     environment:
       POSTGRES_USER: ${POSTGRES_ADMIN_USER}
       POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      APP_DB_USER: ${POSTGRES_APP_USER}
+      APP_DB_PASSWORD: ${POSTGRES_APP_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       TZ: Asia/Tokyo
       LANG: ja_JP.UTF-8
@@ -32,7 +35,7 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_ADMIN_USER}:${POSTGRES_ADMIN_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL_ADMIN}
       TZ: Asia/Tokyo
       LANG: ja_JP.UTF-8
       LC_ALL: ja_JP.UTF-8
@@ -71,7 +74,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgres://${POSTGRES_APP_USER}:${POSTGRES_APP_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL_APP}
       BASE_URL: ${BASE_URL}
       SESSION_SECRET: ${SESSION_SECRET}
       AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER_BASE_URL}
