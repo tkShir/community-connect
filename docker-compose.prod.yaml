@@ -1,0 +1,12 @@
+services:
+  # In prod, do NOT publish DB to host unless you explicitly need it.
+  db:
+    ports: []
+
+  # In prod, app should only be reachable via Caddy
+  app:
+    ports: []
+
+  caddy:
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro

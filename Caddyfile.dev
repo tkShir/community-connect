@@ -1,0 +1,9 @@
+{
+  admin off
+}
+
+localhost {
+  tls internal
+  encode gzip
+  reverse_proxy app:3000
+}

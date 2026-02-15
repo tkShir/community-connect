@@ -4,14 +4,17 @@ services:
       context: .
       dockerfile: Dockerfile.postgres
     container_name: community_connect_db
-    ports:
-      - "127.0.0.1:5432:5432"
+    # NOTE: no host port publishing in base (security + portability).
+    # Dev override will publish 127.0.0.1:5432 if you want it.
     volumes:
       - db-store:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-onyx}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      APP_DB_USER: ${POSTGRES_APP_USER}
+      APP_DB_PASSWORD: ${POSTGRES_APP_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       TZ: Asia/Tokyo
       LANG: ja_JP.UTF-8
       LC_ALL: ja_JP.UTF-8
@@ -29,8 +32,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-onyx}
+      DATABASE_URL: ${DATABASE_URL_ADMIN}
       TZ: Asia/Tokyo
       LANG: ja_JP.UTF-8
       LC_ALL: ja_JP.UTF-8
@@ -61,5 +66,45 @@ services:
         fi
     restart: "no"
 
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL_APP}
+      BASE_URL: ${BASE_URL}
+      SESSION_SECRET: ${SESSION_SECRET}
+      AUTH0_ISSUER_BASE_URL: ${AUTH0_ISSUER_BASE_URL}
+      AUTH0_CLIENT_ID: ${AUTH0_CLIENT_ID}
+      AUTH0_CLIENT_SECRET: ${AUTH0_CLIENT_SECRET}
+    depends_on:
+      db:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    expose:
+      - "3000"
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    container_name: community_connect_caddy
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    # Caddyfile is provided by overrides (dev/prod) so base stays clean.
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+
 volumes:
   db-store:
+  caddy-data:
+  caddy-config:
