@@ -9,9 +9,9 @@ services:
     volumes:
       - db-store:/var/lib/postgresql/data
     environment:
-      POSTGRES_USER: ${POSTGRES_APP_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_APP_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB:-onyx}
+      POSTGRES_USER: ${POSTGRES_ADMIN_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
       TZ: Asia/Tokyo
       LANG: ja_JP.UTF-8
       LC_ALL: ja_JP.UTF-8
