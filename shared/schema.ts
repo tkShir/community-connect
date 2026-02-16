@@ -89,6 +89,13 @@ export const feedback = pgTable("feedback", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const officialContent = pgTable("official_content", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull().default(""),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // === RELATIONS ===
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
@@ -157,6 +164,7 @@ export const insertEventSchema = createInsertSchema(events).omit({ id: true, cre
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
 export const insertCustomOptionSchema = createInsertSchema(customOptions).omit({ id: true, createdAt: true });
 export const insertFeedbackSchema = createInsertSchema(feedback).omit({ id: true, createdAt: true, userId: true });
+export const insertOfficialContentSchema = createInsertSchema(officialContent).omit({ id: true, updatedAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -179,6 +187,9 @@ export type InsertCustomOption = z.infer<typeof insertCustomOptionSchema>;
 
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+
+export type OfficialContent = typeof officialContent.$inferSelect;
+export type InsertOfficialContent = z.infer<typeof insertOfficialContentSchema>;
 
 export type MatchWithProfile = Match & {
   partner: Profile;
