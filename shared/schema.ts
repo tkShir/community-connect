@@ -181,5 +181,5 @@ export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 
 export type MatchWithProfile = Match & {
-  partner: Profile;
+  partnerProfile: Profile;
 };
