@@ -21,6 +21,11 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Health check — no auth or DB dependency, useful for diagnosing cold-start issues
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+
   // === Profiles ===
   
   app.get(api.profiles.me.path, async (req, res) => {
