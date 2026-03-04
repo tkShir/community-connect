@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import { setupAuth0 } from "./auth0";
 dotenv.config();
 
-const app = express();
+export const app = express();
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -65,7 +65,12 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
+let _initialized = false;
+
+export async function initialize(): Promise<void> {
+  if (_initialized) return;
+  _initialized = true;
+
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
@@ -81,29 +86,29 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
+  // On Vercel, static files are served by the CDN — skip serveStatic.
+  // In development, use Vite middleware.
+  if (process.env.NODE_ENV === "production" && !process.env.VERCEL) {
     serveStatic(app);
-  } else {
+  } else if (process.env.NODE_ENV !== "production") {
     const { setupVite } = await import("./vite");
     await setupVite(httpServer, app);
   }
+}
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5173 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || "5173", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
-})();
+// Start the HTTP server when running directly (not on Vercel)
+if (!process.env.VERCEL) {
+  initialize().then(() => {
+    const port = parseInt(process.env.PORT || "5173", 10);
+    httpServer.listen(
+      {
+        port,
+        host: "0.0.0.0",
+        reusePort: true,
+      },
+      () => {
+        log(`serving on port ${port}`);
+      },
+    );
+  });
+}
