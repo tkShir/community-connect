@@ -385,7 +385,8 @@
     "password": "パスワード",
     "password_placeholder": "8文字以上",
     "password_requirements": "8文字以上で、大文字・小文字・数字を含む必要があります。",
-    "create_account": "アカウントを作成"
+    "create_account": "アカウントを作成",
+    "create_user_already_exists": "このメールアドレスはすでに登録されています。"
   },
   "not_found": {
     "page_not_found": "404 ページが見つかりません",

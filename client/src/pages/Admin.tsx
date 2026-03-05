@@ -39,6 +39,7 @@ export default function Admin() {
       const res = await apiRequest("POST", "/api/admin/users", input);
       if (!res.ok) {
         const err = await res.json();
+        if (res.status === 409) throw new Error(t("admin.create_user_already_exists"));
         throw new Error(err.message ?? t("admin.create_user_failed"));
       }
       return res.json();

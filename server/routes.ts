@@ -696,7 +696,8 @@ export async function registerRoutes(
       res.status(201).json(created);
     } catch (err: any) {
       console.error("[admin] createAuth0User failed:", err.message);
-      res.status(500).json({ message: err.message ?? "Failed to create user" });
+      const status = err.statusCode === 409 ? 409 : 500;
+      res.status(status).json({ message: err.message ?? "Failed to create user" });
     }
   });
 

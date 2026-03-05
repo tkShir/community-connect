@@ -431,7 +431,10 @@ export async function createAuth0User(input: CreateAuth0UserInput): Promise<{ id
   });
 
   if (result.error || result.statusCode >= 400) {
-    throw new Error(result.message ?? result.error ?? "Failed to create user in Auth0");
+    const err = new Error(result.message ?? result.error ?? "Failed to create user in Auth0") as Error & { statusCode?: number };
+    // Auth0 returns 409 for duplicate users
+    err.statusCode = result.statusCode === 409 || result.message?.includes("already exists") ? 409 : 500;
+    throw err;
   }
 
   return { id: result.user_id, email: result.email };
