@@ -6,21 +6,46 @@ import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
+import { isAuthenticated, getSessionUserId } from "./auth0";
 
 function isAuthed(req: Request): boolean {
-  const anyReq = req as any;
-  return !!anyReq.oidc?.isAuthenticated?.();
+  return isAuthenticated(req);
 }
 
 function getUserId(req: Request): string {
-  const anyReq = req as any;
-  return anyReq.oidc?.user?.sub as string;
+  return getSessionUserId(req);
 }
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Health check — no auth or DB dependency, useful for diagnosing cold-start issues
+  app.get("/api/health", (_req, res) => {
+    res.json({ status: "ok" });
+  });
+
+  // Env-var diagnostic — shows URL values in full (so you can confirm the domain is correct)
+  // and masks secrets. Remove this endpoint once the deployment is confirmed working.
+  app.get("/api/env-check", (_req, res) => {
+    const urlVars = ["AUTH0_ISSUER_BASE_URL", "DATABASE_URL", "BASE_URL"];
+    const secretVars = ["AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "SESSION_SECRET"];
+    const vars = [...urlVars, ...secretVars];
+    const result: Record<string, string> = {};
+    for (const v of vars) {
+      const val = process.env[v];
+      if (!val) {
+        result[v] = "MISSING";
+      } else if (urlVars.includes(v)) {
+        // Show full URL (minus DB password) so you can diagnose wrong values
+        result[v] = val.replace(/:([^@]+)@/, ":***@");
+      } else {
+        result[v] = "(set)";
+      }
+    }
+    res.json(result);
+  });
+
   // === Profiles ===
   
   app.get(api.profiles.me.path, async (req, res) => {
@@ -653,8 +678,10 @@ export async function registerRoutes(
     }
   });
 
-  // Seed data
-  seedDatabase();
+  // Seed data (fire-and-forget — errors must not crash the process)
+  seedDatabase().catch((err) =>
+    console.warn("[seed] seedDatabase failed (non-fatal):", err.message)
+  );
 
   return httpServer;
 }

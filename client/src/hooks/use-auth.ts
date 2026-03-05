@@ -2,19 +2,34 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
 async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/auth/user", {
-    credentials: "include",
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10_000);
 
-  if (response.status === 401) {
-    return null;
+  try {
+    const response = await fetch("/api/auth/user", {
+      credentials: "include",
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (response.status === 401) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`${response.status}: ${response.statusText}`);
+    }
+
+    return response.json();
+  } catch (err) {
+    clearTimeout(timeout);
+    // Treat a timeout as "not authenticated" rather than a hard error
+    if (err instanceof Error && err.name === "AbortError") {
+      console.warn("Auth check timed out — treating user as unauthenticated");
+      return null;
+    }
+    throw err;
   }
-
-  if (!response.ok) {
-    throw new Error(`${response.status}: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
 async function logout(): Promise<void> {
