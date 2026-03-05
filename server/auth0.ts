@@ -10,6 +10,13 @@ function getBaseURL(): string {
   return `http://localhost:${port}`;
 }
 
+function stubAuthRoutes(app: Express, msg: string) {
+  app.get("/api/auth/user", (_req, res) => res.status(503).json({ message: msg }));
+  app.get("/login", (_req, res) => res.status(503).send(msg));
+  app.get("/logout", (_req, res) => res.status(503).send(msg));
+  app.get("/callback", (_req, res) => res.status(503).send(msg));
+}
+
 export function setupAuth0(app: Express) {
   const baseURL = getBaseURL();
   const issuerBaseURL = process.env.AUTH0_ISSUER_BASE_URL;
@@ -17,16 +24,18 @@ export function setupAuth0(app: Express) {
   const clientSecret = process.env.AUTH0_CLIENT_SECRET;
   const secret = process.env.SESSION_SECRET;
 
-  // Log what we have so Vercel function logs show the actual config state.
-  // Values are partially masked so they're safe to log.
+  // Log FULL values (not truncated) so Vercel runtime logs show exactly what the
+  // function sees. Secrets are masked; URLs are shown in full for diagnosis.
   console.log("[auth0] baseURL:", baseURL);
-  console.log("[auth0] issuerBaseURL:", issuerBaseURL ? issuerBaseURL.slice(0, 40) + "..." : "(NOT SET)");
-  console.log("[auth0] clientID:", clientID ? clientID.slice(0, 8) + "..." : "(NOT SET)");
-  console.log("[auth0] secret:", secret ? "(set)" : "(NOT SET)");
-  console.log("[auth0] clientSecret:", clientSecret ? "(set)" : "(NOT SET)");
+  console.log("[auth0] AUTH0_ISSUER_BASE_URL:", issuerBaseURL ?? "(NOT SET)");
+  console.log("[auth0] AUTH0_CLIENT_ID:", clientID ? clientID.slice(0, 8) + "..." : "(NOT SET)");
+  console.log("[auth0] SESSION_SECRET:", secret ? "(set)" : "(NOT SET)");
+  console.log("[auth0] AUTH0_CLIENT_SECRET:", clientSecret ? "(set)" : "(NOT SET)");
+  console.log("[auth0] DATABASE_URL:", process.env.DATABASE_URL
+    ? process.env.DATABASE_URL.replace(/:([^@]+)@/, ":***@")  // mask password
+    : "(NOT SET)");
 
-  // If required env vars are missing, register stub routes that return 503 with
-  // a clear message rather than letting the process crash / hang on OIDC discovery.
+  // Check for missing required vars
   const missing = [
     !issuerBaseURL && "AUTH0_ISSUER_BASE_URL",
     !clientID && "AUTH0_CLIENT_ID",
@@ -35,38 +44,35 @@ export function setupAuth0(app: Express) {
   ].filter(Boolean) as string[];
 
   if (missing.length > 0) {
-    console.error("[auth0] Missing required env vars:", missing.join(", "));
     const msg = `Auth not configured. Missing env vars: ${missing.join(", ")}`;
-    app.get("/api/auth/user", (_req, res) => res.status(503).json({ message: msg }));
-    app.get("/login", (_req, res) => res.status(503).send(msg));
-    app.get("/logout", (_req, res) => res.status(503).send(msg));
-    app.get("/callback", (_req, res) => res.status(503).send(msg));
+    console.error("[auth0]", msg);
+    stubAuthRoutes(app, msg);
     return;
   }
 
-  // Validate that AUTH0_ISSUER_BASE_URL looks like a real HTTPS URL, not a placeholder.
+  // Validate that AUTH0_ISSUER_BASE_URL is a proper URL
   let parsedIssuer: URL;
   try {
     parsedIssuer = new URL(issuerBaseURL!);
   } catch {
     const msg = `AUTH0_ISSUER_BASE_URL is not a valid URL: "${issuerBaseURL}". Expected https://YOURTENANT.auth0.com`;
     console.error("[auth0]", msg);
-    app.get("/api/auth/user", (_req, res) => res.status(503).json({ message: msg }));
-    app.get("/login", (_req, res) => res.status(503).send(msg));
-    app.get("/logout", (_req, res) => res.status(503).send(msg));
-    app.get("/callback", (_req, res) => res.status(503).send(msg));
+    stubAuthRoutes(app, msg);
     return;
   }
 
-  if (parsedIssuer.protocol !== "https:" && parsedIssuer.hostname !== "localhost") {
-    const msg = `AUTH0_ISSUER_BASE_URL must use https://. Got: "${issuerBaseURL}"`;
+  // Reject placeholders and bare hostnames (must contain at least one dot)
+  const hostname = parsedIssuer.hostname;
+  const looksReal = hostname === "localhost" || hostname.includes(".");
+  if (!looksReal || (parsedIssuer.protocol !== "https:" && hostname !== "localhost")) {
+    const msg = `AUTH0_ISSUER_BASE_URL looks wrong: "${issuerBaseURL}". ` +
+      `Expected https://YOURTENANT.auth0.com — no bare hostnames or http:// in production.`;
     console.error("[auth0]", msg);
-    app.get("/api/auth/user", (_req, res) => res.status(503).json({ message: msg }));
-    app.get("/login", (_req, res) => res.status(503).send(msg));
-    app.get("/logout", (_req, res) => res.status(503).send(msg));
-    app.get("/callback", (_req, res) => res.status(503).send(msg));
+    stubAuthRoutes(app, msg);
     return;
   }
+
+  console.log("[auth0] Config looks valid; starting OIDC discovery against", hostname);
 
   const config = {
     authRequired: false,
@@ -78,7 +84,7 @@ export function setupAuth0(app: Express) {
     clientSecret: clientSecret!,
   };
 
-  // Attach /login, /logout, and /callback routes as in the Auth0 Express quickstart.
+  // Attach /login, /logout, and /callback routes
   app.use(auth(config));
 
   // Current authenticated user endpoint for the frontend.

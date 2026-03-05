@@ -26,25 +26,20 @@ export async function registerRoutes(
     res.json({ status: "ok" });
   });
 
-  // Env-var diagnostic — shows which required vars are set/missing (never exposes values).
-  // Remove this endpoint once the deployment is confirmed working.
+  // Env-var diagnostic — shows URL values in full (so you can confirm the domain is correct)
+  // and masks secrets. Remove this endpoint once the deployment is confirmed working.
   app.get("/api/env-check", (_req, res) => {
-    const vars = [
-      "AUTH0_ISSUER_BASE_URL",
-      "AUTH0_CLIENT_ID",
-      "AUTH0_CLIENT_SECRET",
-      "SESSION_SECRET",
-      "DATABASE_URL",
-      "BASE_URL",
-    ];
+    const urlVars = ["AUTH0_ISSUER_BASE_URL", "DATABASE_URL", "BASE_URL"];
+    const secretVars = ["AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET", "SESSION_SECRET"];
+    const vars = [...urlVars, ...secretVars];
     const result: Record<string, string> = {};
     for (const v of vars) {
       const val = process.env[v];
       if (!val) {
         result[v] = "MISSING";
-      } else if (v.includes("URL") && !v.includes("SECRET")) {
-        // Show the first 30 chars of URLs so you can confirm the domain
-        result[v] = val.slice(0, 30) + (val.length > 30 ? "..." : "");
+      } else if (urlVars.includes(v)) {
+        // Show full URL (minus DB password) so you can diagnose wrong values
+        result[v] = val.replace(/:([^@]+)@/, ":***@");
       } else {
         result[v] = "(set)";
       }
