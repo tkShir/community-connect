@@ -113,10 +113,14 @@ export default function Admin() {
       </header>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-[900px]">
+        <TabsList className="grid w-full grid-cols-6 max-w-[1100px]">
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
             {t("admin.users_count", { count: profiles?.length || 0 })}
+          </TabsTrigger>
+          <TabsTrigger value="connections" data-testid="tab-admin-connections">
+            <UserPlus className="w-4 h-4 mr-2" />
+            {t("admin.connections_approval")}
           </TabsTrigger>
           <TabsTrigger value="events" data-testid="tab-admin-events">
             <Calendar className="w-4 h-4 mr-2" />
@@ -238,6 +242,10 @@ export default function Admin() {
           </div>
         </TabsContent>
 
+        <TabsContent value="connections" className="mt-6">
+          <ConnectionsApproval />
+        </TabsContent>
+
         <TabsContent value="events" className="mt-6">
           <EventsManagement />
         </TabsContent>
@@ -254,6 +262,118 @@ export default function Admin() {
           <CustomOptionsManagement />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ConnectionsApproval() {
+  useLocale();
+  const { toast } = useToast();
+
+  const { data: pendingMatches, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/matches/pending"],
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/matches/${id}/approve`, {});
+      if (!res.ok) throw new Error("Failed to approve");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches/pending"] });
+      toast({ title: t("admin.connection_approved") });
+    },
+    onError: () => toast({ title: t("admin.connection_approve_failed"), variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/matches/${id}/reject`, {});
+      if (!res.ok) throw new Error("Failed to reject");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches/pending"] });
+      toast({ title: t("admin.connection_rejected") });
+    },
+    onError: () => toast({ title: t("admin.connection_reject_failed"), variant: "destructive" }),
+  });
+
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-xl" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">{t("admin.connections_approval_title")}</h2>
+        <Badge variant="secondary">{t("admin.pending_approval_count", { count: pendingMatches?.length || 0 })}</Badge>
+      </div>
+      {!pendingMatches || pendingMatches.length === 0 ? (
+        <Card className="bg-card/30 border-white/5">
+          <CardContent className="p-8 text-center text-muted-foreground">
+            {t("admin.no_pending_connections")}
+          </CardContent>
+        </Card>
+      ) : (
+        pendingMatches.map((match: any) => (
+          <Card key={match.id} className="bg-card border-primary/10">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold mx-auto mb-1">
+                      {match.initiatorProfile?.alias?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <p className="text-sm font-medium">{match.initiatorProfile?.alias}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {Array.isArray(match.initiatorProfile?.profession)
+                        ? match.initiatorProfile.profession.slice(0, 1).join(", ")
+                        : match.initiatorProfile?.profession}
+                    </p>
+                  </div>
+                  <div className="text-muted-foreground text-sm">{t("admin.connection_request_arrow")}</div>
+                  <div className="text-center">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-bold mx-auto mb-1">
+                      {match.receiverProfile?.alias?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <p className="text-sm font-medium">{match.receiverProfile?.alias}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {Array.isArray(match.receiverProfile?.profession)
+                        ? match.receiverProfile.profession.slice(0, 1).join(", ")
+                        : match.receiverProfile?.profession}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => approveMutation.mutate(match.id)}
+                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                    data-testid={`button-approve-connection-${match.id}`}
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    {t("admin.approve")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => rejectMutation.mutate(match.id)}
+                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                    className="text-muted-foreground hover:text-destructive"
+                    data-testid={`button-reject-connection-${match.id}`}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    {t("admin.deny")}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {new Date(match.createdAt).toLocaleDateString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))
+      )}
     </div>
   );
 }

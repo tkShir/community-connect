@@ -3,7 +3,7 @@ import {
   profiles, matches, notifications, events, groups, customOptions, feedback,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
-  type MatchWithProfile,
+  type MatchWithProfile, type MatchWithBothProfiles,
   type Event, type InsertEvent,
   type Group, type InsertGroup,
   type CustomOption,
@@ -84,11 +84,13 @@ export interface IStorage {
 
   // Matches
   createMatch(match: InsertMatch): Promise<Match>;
-  updateMatchStatus(id: number, status: "accepted" | "rejected"): Promise<Match | undefined>;
+  updateMatchStatus(id: number, status: "awaiting_admin" | "pending" | "accepted" | "rejected"): Promise<Match | undefined>;
   getMatchesForProfile(profileId: number): Promise<MatchWithProfile[]>;
   getPotentialMatches(profileId: number): Promise<Profile[]>;
   getSuggestedMatches(profileId: number): Promise<Profile[]>;
   getMatch(id: number): Promise<Match | undefined>;
+  getPendingAdminMatches(): Promise<MatchWithBothProfiles[]>;
+  getAdminUserIds(): Promise<string[]>;
 
   // Notifications
   createNotification(userId: string, content: string): Promise<any>;
@@ -160,13 +162,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMatch(insertMatch: InsertMatch): Promise<Match> {
-    const [match] = await db.insert(matches).values(insertMatch).returning();
+    const [match] = await db.insert(matches).values({ ...insertMatch, status: "awaiting_admin" }).returning();
     return match;
   }
 
-  async updateMatchStatus(id: number, status: "accepted" | "rejected"): Promise<Match | undefined> {
+  async updateMatchStatus(id: number, status: "awaiting_admin" | "pending" | "accepted" | "rejected"): Promise<Match | undefined> {
     const [updated] = await db.update(matches).set({ status }).where(eq(matches.id, id)).returning();
     return updated;
+  }
+
+  async getPendingAdminMatches(): Promise<MatchWithBothProfiles[]> {
+    const pendingMatches = await db.select().from(matches).where(eq(matches.status, "awaiting_admin"));
+    const enriched: MatchWithBothProfiles[] = [];
+    for (const match of pendingMatches) {
+      const initiatorProfile = await this.getProfile(match.initiatorId);
+      const receiverProfile = await this.getProfile(match.receiverId);
+      if (initiatorProfile && receiverProfile) {
+        enriched.push({ ...match, initiatorProfile, receiverProfile });
+      }
+    }
+    return enriched;
+  }
+
+  async getAdminUserIds(): Promise<string[]> {
+    const admins = await db.select({ userId: profiles.userId }).from(profiles).where(eq(profiles.isAdmin, true));
+    return admins.map(a => a.userId);
   }
 
   async getMatch(id: number): Promise<Match | undefined> {

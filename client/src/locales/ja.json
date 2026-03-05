@@ -228,6 +228,7 @@
     "accept": "承認",
     "pending_sent": "送信済み（承認待ち）申請（{count}）",
     "waiting_for_response": "返信待ち",
+    "awaiting_admin_approval": "理事会審査中",
     "accepted_connections": "承認済みコネクション（{count}）",
     "no_connections": "まだコネクションはありません。新しい人を探してつながりましょう！",
     "connected": "接続済み"
@@ -438,7 +439,15 @@
     "password_placeholder": "8文字以上",
     "password_requirements": "8文字以上で、大文字・小文字・数字を含む必要があります。",
     "create_account": "アカウントを作成",
-    "create_user_already_exists": "このメールアドレスはすでに登録されています。"
+    "create_user_already_exists": "このメールアドレスはすでに登録されています。",
+    "connections_approval": "つながり申請",
+    "connections_approval_title": "つながり申請の承認",
+    "no_pending_connections": "承認待ちのつながり申請はありません。",
+    "connection_approved": "つながり申請を承認しました。申請先に通知しました。",
+    "connection_approve_failed": "承認に失敗しました",
+    "connection_rejected": "つながり申請を却下しました。",
+    "connection_reject_failed": "却下に失敗しました",
+    "connection_request_arrow": "→"
   },
   "not_found": {
     "page_not_found": "404 ページが見つかりません",

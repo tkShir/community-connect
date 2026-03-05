@@ -31,7 +31,7 @@ export default function Connections() {
   ) || [];
   const acceptedConnections = matches?.filter((m) => m.status === "accepted") || [];
   const sentRequests = matches?.filter(
-    (m) => m.status === "pending" && m.initiatorId !== m.partnerProfile.id
+    (m) => (m.status === "pending" || m.status === "awaiting_admin") && m.initiatorId !== m.partnerProfile.id
   ) || [];
 
   const getContactIcon = (method: string) => {
@@ -127,9 +127,15 @@ export default function Connections() {
                     {Array.isArray(match.partnerProfile.profession) ? translateOptionKeys(match.partnerProfile.profession).join(", ") : translateOptionKey(match.partnerProfile.profession)}
                   </p>
                 </div>
-                <Badge variant="secondary" className="text-xs">
-                  {t("connections.waiting_for_response")}
-                </Badge>
+                {match.status === "awaiting_admin" ? (
+                  <Badge variant="outline" className="text-xs text-yellow-500 border-yellow-500/30">
+                    {t("connections.awaiting_admin_approval")}
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">
+                    {t("connections.waiting_for_response")}
+                  </Badge>
+                )}
               </CardContent>
             </Card>
           ))}

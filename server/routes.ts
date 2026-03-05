@@ -144,10 +144,10 @@ export async function registerRoutes(
         receiverId,
       });
 
-      // Notification for receiver
-      const receiverProfile = await storage.getProfile(receiverId);
-      if (receiverProfile) {
-        await storage.createNotification(receiverProfile.userId, `${myProfile.alias} sent you a connection request!`);
+      // Notify all admins to review the connection request
+      const adminUserIds = await storage.getAdminUserIds();
+      for (const adminUserId of adminUserIds) {
+        await storage.createNotification(adminUserId, `${myProfile.alias} がつながり申請を送りました。管理画面で確認してください。`);
       }
 
       res.status(201).json(match);
@@ -224,7 +224,62 @@ export async function registerRoutes(
   });
 
   // === Admin Routes ===
-  
+
+  // Admin: Get pending connection requests (awaiting_admin)
+  app.get("/api/admin/matches/pending", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    const pending = await storage.getPendingAdminMatches();
+    res.json(pending);
+  });
+
+  // Admin: Approve connection request → set status to "pending" so receiver sees it
+  app.post("/api/admin/matches/:id/approve", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+    const matchId = Number(req.params.id);
+    const match = await storage.getMatch(matchId);
+    if (!match) return res.status(404).json({ message: "Match not found" });
+
+    const updated = await storage.updateMatchStatus(matchId, "pending");
+
+    // Notify receiver that a connection request is waiting
+    const receiverProfile = await storage.getProfile(match.receiverId);
+    const initiatorProfile = await storage.getProfile(match.initiatorId);
+    if (receiverProfile && initiatorProfile) {
+      await storage.createNotification(receiverProfile.userId, `${initiatorProfile.alias} からつながり申請が届いています！`);
+    }
+
+    res.json(updated);
+  });
+
+  // Admin: Reject connection request
+  app.post("/api/admin/matches/:id/reject", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+    const matchId = Number(req.params.id);
+    const match = await storage.getMatch(matchId);
+    if (!match) return res.status(404).json({ message: "Match not found" });
+
+    const updated = await storage.updateMatchStatus(matchId, "rejected");
+
+    // Notify initiator that the request was not approved
+    const initiatorProfile = await storage.getProfile(match.initiatorId);
+    if (initiatorProfile) {
+      await storage.createNotification(initiatorProfile.userId, "つながり申請が管理者により却下されました。");
+    }
+
+    res.json(updated);
+  });
+
   app.get("/api/admin/profiles", async (req, res) => {
     if (!isAuthed(req)) return res.sendStatus(401);
     const userId = getUserId(req);

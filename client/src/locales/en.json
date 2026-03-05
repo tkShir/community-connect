@@ -228,6 +228,7 @@
     "accept": "Accept",
     "pending_sent": "Pending Sent Requests ({count})",
     "waiting_for_response": "Waiting for response",
+    "awaiting_admin_approval": "Pending Board Review",
     "accepted_connections": "Accepted Connections ({count})",
     "no_connections": "No connections yet. Discover new people to connect with!",
     "connected": "Connected"
@@ -456,7 +457,15 @@
     "password_placeholder": "Min. 8 characters",
     "password_requirements": "Must be at least 8 characters and include uppercase, lowercase, and a number.",
     "create_account": "Create Account",
-    "create_user_already_exists": "A user with this email already exists."
+    "create_user_already_exists": "A user with this email already exists.",
+    "connections_approval": "Connections",
+    "connections_approval_title": "Connection Request Approvals",
+    "no_pending_connections": "No connection requests pending approval.",
+    "connection_approved": "Request approved. The recipient has been notified.",
+    "connection_approve_failed": "Failed to approve request",
+    "connection_rejected": "Connection request rejected.",
+    "connection_reject_failed": "Failed to reject request",
+    "connection_request_arrow": "→"
   },
   "not_found": {
     "page_not_found": "404 Page Not Found",

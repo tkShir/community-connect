@@ -29,7 +29,7 @@ export const matches = pgTable("matches", {
   id: serial("id").primaryKey(),
   initiatorId: integer("initiator_id").notNull().references(() => profiles.id),
   receiverId: integer("receiver_id").notNull().references(() => profiles.id),
-  status: text("status", { enum: ["pending", "accepted", "rejected"] }).default("pending").notNull(),
+  status: text("status", { enum: ["awaiting_admin", "pending", "accepted", "rejected"] }).default("awaiting_admin").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -183,4 +183,9 @@ export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
 
 export type MatchWithProfile = Match & {
   partnerProfile: Profile;
+};
+
+export type MatchWithBothProfiles = Match & {
+  initiatorProfile: Profile;
+  receiverProfile: Profile;
 };
