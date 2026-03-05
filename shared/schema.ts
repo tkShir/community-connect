@@ -17,6 +17,7 @@ export const profiles = pgTable("profiles", {
   hobbies: text("hobbies").array().notNull(),
   interests: text("interests").array().notNull(),
   goal: text("goal").array().notNull(),
+  careerStatus: text("career_status").notNull().default("other"),
   isPublic: boolean("is_public").default(true).notNull(),
   ageRange: text("age_range").notNull(),
   contactMethod: text("contact_method").notNull(),

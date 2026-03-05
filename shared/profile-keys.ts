@@ -4,33 +4,76 @@
  */
 
 export const PROFESSION_KEYS = [
+  // Technology & Digital
   "technology",
+  "software_engineering",
+  "data_science_ai",
+  "product_management_prof",
+  "ux_ui_design",
+  "cybersecurity",
+  "cloud_infrastructure",
+  // Finance & Investment
   "finance",
+  "investment_banking",
+  "private_equity_vc",
+  "asset_management",
+  "accounting",
+  "insurance",
+  "fintech",
+  // Business & Strategy
   "consulting",
-  "healthcare",
-  "education",
-  "arts",
-  "engineering",
-  "law",
+  "management_strategy",
+  "business_development",
+  "human_resources",
   "marketing",
-  "real_estate",
+  "public_relations",
+  "logistics_transportation",
+  // Law & Compliance
+  "law",
+  "legal_compliance",
+  "intellectual_property",
+  // Healthcare & Life Sciences
+  "healthcare",
+  "pharmaceutical",
+  "medical_devices",
+  // Manufacturing & Engineering
+  "engineering",
   "manufacturing",
-  "retail",
-  "media_entertainment",
-  "government",
-  "non_profit",
+  "automotive",
+  "aerospace_defense",
+  "energy",
   "architecture_design",
+  // Real Estate & Infrastructure
+  "real_estate",
+  "construction",
+  // Media, Arts & Education
+  "media_entertainment",
+  "arts",
+  "education",
+  "research_academia",
+  // Consumer & Retail
+  "retail",
+  "fashion_luxury",
   "hospitality_tourism",
   "agriculture_food",
-  "logistics_transportation",
-  "energy",
-  "pharmaceutical",
-  "insurance",
+  // Public & Social
+  "government",
+  "non_profit",
+  "international_organizations",
+  // Other
   "telecommunications",
-  "human_resources",
-  "accounting",
+  "family_business_management",
 ] as const;
 
+export const CAREER_STATUS_KEYS = [
+  "career_student",
+  "career_company_employee",
+  "career_family_business",
+  "career_executive",
+  "career_other",
+] as const;
+
+// Keep for backward compat (existing DB data references these)
 export const GOAL_KEYS = [
   "find_mentor",
   "find_mentee",
@@ -40,26 +83,53 @@ export const GOAL_KEYS = [
 ] as const;
 
 export const INTEREST_KEYS = [
-  "ai",
-  "startups",
-  "investing",
-  "ux_design",
-  "data_science",
-  "product_management",
-  "growth_hacking",
-  "blockchain",
-  "sustainability",
+  // Leadership & Management
   "leadership",
+  "management",
+  "corporate_governance",
+  "organizational_development",
+  "change_management",
+  // Strategy & Growth
+  "business_strategy",
+  "entrepreneurship",
+  "startups",
+  "innovation_management",
+  "operational_excellence",
+  // Finance & Investment
+  "investing",
+  "ma_mergers_acquisitions",
+  "ipo",
+  "private_equity",
+  "wealth_management",
+  "fintech",
+  // Technology & Digital Transformation
+  "ai",
+  "dx_digital_transformation",
+  "data_science",
   "cloud_computing",
   "cybersecurity",
-  "machine_learning",
+  "product_management",
+  // Marketing & Branding
+  "brand_strategy",
   "digital_marketing",
-  "entrepreneurship",
-  "social_impact",
-  "fintech",
+  "growth_hacking",
   "ecommerce",
-  "remote_work",
+  "pr_communications",
+  // International & Cross-Cultural
+  "global_expansion",
+  "cross_cultural_management",
+  "international_trade",
+  // Sustainability & Social Impact
+  "sustainability",
+  "esg",
+  "social_impact",
+  "family_business_succession",
+  // Career Development
   "career_development",
+  "negotiation",
+  "public_speaking",
+  "executive_coaching",
+  "networking_skills",
 ] as const;
 
 export const HOBBY_KEYS = [

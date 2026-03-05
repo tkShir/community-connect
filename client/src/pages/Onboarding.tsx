@@ -18,7 +18,7 @@ import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import {
   PROFESSION_KEYS,
-  GOAL_KEYS,
+  CAREER_STATUS_KEYS,
   INTEREST_KEYS,
   HOBBY_KEYS,
   AGE_RANGE_KEYS,
@@ -33,7 +33,7 @@ import { useCustomOptions } from "@/hooks/use-custom-options";
 const formSchema = insertProfileSchema.extend({
   alias: z.string().min(1, t("onboarding.alias_required")).min(2, t("onboarding.alias_min_length")),
   profession: z.array(z.string()).min(1, t("onboarding.select_profession")),
-  goal: z.array(z.string()).min(1, t("onboarding.select_goal")),
+  careerStatus: z.string().min(1, t("onboarding.select_career_status")),
   interests: z.array(z.string()).min(1, t("onboarding.select_interest")),
   hobbies: z.array(z.string()).min(1, t("onboarding.select_hobby")),
 });
@@ -50,7 +50,7 @@ export default function Onboarding() {
   useCustomOptions(); // populate custom options cache
 
   const professionOptions = [...buildOptions(PROFESSION_KEYS), ...buildCustomOptions("profession")];
-  const goalOptions = buildOptions(GOAL_KEYS);
+  const careerStatusOptions = buildOptions(CAREER_STATUS_KEYS);
   const interestOptions = [...buildOptions(INTEREST_KEYS), ...buildCustomOptions("interests")];
   const hobbyOptions = [...buildOptions(HOBBY_KEYS), ...buildCustomOptions("hobbies")];
   const ageRangeOptions = buildOptions(AGE_RANGE_KEYS);
@@ -64,7 +64,7 @@ export default function Onboarding() {
       profession: [],
       hobbies: [],
       interests: [],
-      goal: [],
+      careerStatus: "",
       isPublic: true,
       ageRange: "",
       contactMethod: "",
@@ -82,9 +82,7 @@ export default function Onboarding() {
         ),
         hobbies: migrateArrayToKeys(existingProfile.hobbies),
         interests: migrateArrayToKeys(existingProfile.interests),
-        goal: migrateArrayToKeys(
-          Array.isArray(existingProfile.goal) ? existingProfile.goal : [existingProfile.goal]
-        ),
+        careerStatus: existingProfile.careerStatus ?? "career_other",
         isPublic: existingProfile.isPublic,
         ageRange: migrateToKey(existingProfile.ageRange),
         contactMethod: migrateToKey(existingProfile.contactMethod),
@@ -176,6 +174,33 @@ export default function Onboarding() {
 
               <FormField
                 control={form.control}
+                name="careerStatus"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {t("onboarding.career_status_label")}
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="bg-background border-white/10" data-testid="select-career-status">
+                          <SelectValue placeholder={t("onboarding.select_career_status")} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {careerStatusOptions.map((opt) => (
+                          <SelectItem key={opt.key} value={opt.key}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
                 name="profession"
                 render={({ field }) => (
                   <FormItem>
@@ -189,28 +214,6 @@ export default function Onboarding() {
                         options={professionOptions}
                         placeholder={t("onboarding.profession_placeholder")}
                         data-testid="input-profession"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="goal"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      {t("onboarding.goals_label")}
-                    </FormLabel>
-                    <FormControl>
-                      <TagInput
-                        value={field.value || []}
-                        onChange={field.onChange}
-                        options={goalOptions}
-                        placeholder={t("onboarding.goals_placeholder")}
-                        data-testid="input-goal"
                       />
                     </FormControl>
                     <FormMessage />

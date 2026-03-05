@@ -74,11 +74,11 @@ export default function Profile() {
               <p className="text-sm text-muted-foreground mt-1">{translateOptionKey(profile.ageRange)}</p>
             </div>
             <div className="flex flex-wrap gap-2 justify-end">
-              {(Array.isArray(profile.goal) ? profile.goal : [profile.goal]).map((g: string) => (
-                <Badge key={g} className="bg-primary text-primary-foreground px-3 py-1 text-xs uppercase tracking-wide">
-                  {translateOptionKey(g)}
+              {profile.careerStatus && (
+                <Badge className="bg-primary text-primary-foreground px-3 py-1 text-xs uppercase tracking-wide">
+                  {translateOptionKey(profile.careerStatus)}
                 </Badge>
-              ))}
+              )}
             </div>
           </div>
         </CardHeader>
