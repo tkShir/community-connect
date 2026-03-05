@@ -26,6 +26,32 @@ export async function registerRoutes(
     res.json({ status: "ok" });
   });
 
+  // Env-var diagnostic — shows which required vars are set/missing (never exposes values).
+  // Remove this endpoint once the deployment is confirmed working.
+  app.get("/api/env-check", (_req, res) => {
+    const vars = [
+      "AUTH0_ISSUER_BASE_URL",
+      "AUTH0_CLIENT_ID",
+      "AUTH0_CLIENT_SECRET",
+      "SESSION_SECRET",
+      "DATABASE_URL",
+      "BASE_URL",
+    ];
+    const result: Record<string, string> = {};
+    for (const v of vars) {
+      const val = process.env[v];
+      if (!val) {
+        result[v] = "MISSING";
+      } else if (v.includes("URL") && !v.includes("SECRET")) {
+        // Show the first 30 chars of URLs so you can confirm the domain
+        result[v] = val.slice(0, 30) + (val.length > 30 ? "..." : "");
+      } else {
+        result[v] = "(set)";
+      }
+    }
+    res.json(result);
+  });
+
   // === Profiles ===
   
   app.get(api.profiles.me.path, async (req, res) => {
