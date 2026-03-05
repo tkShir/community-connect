@@ -6,15 +6,14 @@ import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
+import { isAuthenticated, getSessionUserId } from "./auth0";
 
 function isAuthed(req: Request): boolean {
-  const anyReq = req as any;
-  return !!anyReq.oidc?.isAuthenticated?.();
+  return isAuthenticated(req);
 }
 
 function getUserId(req: Request): string {
-  const anyReq = req as any;
-  return anyReq.oidc?.user?.sub as string;
+  return getSessionUserId(req);
 }
 
 export async function registerRoutes(
