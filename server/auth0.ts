@@ -4,7 +4,7 @@ import MemoryStore from "memorystore";
 import * as crypto from "crypto";
 import * as https from "https";
 import * as http from "http";
-import { authStorage } from "./replit_integrations/auth";
+import { authStorage } from "./replit_integrations/auth/storage";
 
 const MemStore = MemoryStore(session);
 
