@@ -678,8 +678,10 @@ export async function registerRoutes(
     }
   });
 
-  // Seed data
-  seedDatabase();
+  // Seed data (fire-and-forget — errors must not crash the process)
+  seedDatabase().catch((err) =>
+    console.warn("[seed] seedDatabase failed (non-fatal):", err.message)
+  );
 
   return httpServer;
 }
