@@ -389,7 +389,21 @@
     "google_form_link_placeholder": "https://docs.google.com/forms/...",
     "edit_event": "Edit Event",
     "event_updated": "Event updated!",
-    "event_update_failed": "Failed to update event"
+    "event_update_failed": "Failed to update event",
+    "create_user": "Create User",
+    "create_new_user": "Create New Account",
+    "create_user_description": "Create a new Auth0 account. The user will be able to log in and complete their profile.",
+    "create_user_success": "Account created successfully",
+    "create_user_failed": "Failed to create account",
+    "first_name": "First Name",
+    "last_name": "Last Name",
+    "first_name_placeholder": "First name",
+    "last_name_placeholder": "Last name",
+    "email": "Email",
+    "password": "Password",
+    "password_placeholder": "Min. 8 characters",
+    "password_requirements": "Must be at least 8 characters and include uppercase, lowercase, and a number.",
+    "create_account": "Create Account"
   },
   "not_found": {
     "page_not_found": "404 Page Not Found",

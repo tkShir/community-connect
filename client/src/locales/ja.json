@@ -371,7 +371,21 @@
     "custom_option_updated": "カスタム選択肢を更新しました",
     "custom_option_update_failed": "カスタム選択肢の更新に失敗しました",
     "custom_option_deleted": "カスタム選択肢を削除しました",
-    "custom_option_delete_failed": "カスタム選択肢の削除に失敗しました"
+    "custom_option_delete_failed": "カスタム選択肢の削除に失敗しました",
+    "create_user": "ユーザー作成",
+    "create_new_user": "新規アカウント作成",
+    "create_user_description": "新しいAuth0アカウントを作成します。ユーザーはログインしてプロフィールを設定できるようになります。",
+    "create_user_success": "アカウントを作成しました",
+    "create_user_failed": "アカウントの作成に失敗しました",
+    "first_name": "名",
+    "last_name": "姓",
+    "first_name_placeholder": "名",
+    "last_name_placeholder": "姓",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "password_placeholder": "8文字以上",
+    "password_requirements": "8文字以上で、大文字・小文字・数字を含む必要があります。",
+    "create_account": "アカウントを作成"
   },
   "not_found": {
     "page_not_found": "404 ページが見つかりません",

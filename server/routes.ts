@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
-import { isAuthenticated, getSessionUserId } from "./auth0";
+import { isAuthenticated, getSessionUserId, createAuth0User } from "./auth0";
 
 function isAuthed(req: Request): boolean {
   return isAuthenticated(req);
@@ -675,6 +675,28 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Admin: Create Auth0 User ===
+
+  app.post("/api/admin/users", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const { email, password, firstName, lastName } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    try {
+      const created = await createAuth0User({ email, password, firstName, lastName });
+      res.status(201).json(created);
+    } catch (err: any) {
+      console.error("[admin] createAuth0User failed:", err.message);
+      res.status(500).json({ message: err.message ?? "Failed to create user" });
     }
   });
 

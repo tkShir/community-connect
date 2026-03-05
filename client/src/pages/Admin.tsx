@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
@@ -28,9 +28,28 @@ export default function Admin() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   const { data: profiles, isLoading, error } = useQuery<Profile[]>({
     queryKey: ["/api/admin/profiles"],
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (input: { email: string; password: string; firstName?: string; lastName?: string }) => {
+      const res = await apiRequest("POST", "/api/admin/users", input);
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message ?? t("admin.create_user_failed"));
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setCreateUserOpen(false);
+      toast({ title: t("admin.create_user_success") });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message || t("admin.create_user_failed"), variant: "destructive" });
+    },
   });
 
   const updateMutation = useMutation({
@@ -117,25 +136,45 @@ export default function Admin() {
         </TabsList>
 
         <TabsContent value="users" className="mt-6 space-y-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder={t("admin.search_placeholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-card border-white/10"
-              data-testid="input-admin-search"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+          <div className="flex gap-3 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder={t("admin.search_placeholder")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-card border-white/10"
+                data-testid="input-admin-search"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-user">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {t("admin.create_user")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-white/10">
+                <DialogHeader>
+                  <DialogTitle>{t("admin.create_new_user")}</DialogTitle>
+                  <DialogDescription>{t("admin.create_user_description")}</DialogDescription>
+                </DialogHeader>
+                <CreateUserForm
+                  onSubmit={(data) => createUserMutation.mutate(data)}
+                  isPending={createUserMutation.isPending}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid gap-4">
@@ -334,6 +373,89 @@ function EditProfileForm({
         data-testid="button-save-profile"
       >
         {isPending ? t("admin.saving") : t("admin.save_changes")}
+      </Button>
+    </form>
+  );
+}
+
+function CreateUserForm({
+  onSubmit,
+  isPending,
+}: {
+  onSubmit: (data: { email: string; password: string; firstName?: string; lastName?: string }) => void;
+  isPending: boolean;
+}) {
+  useLocale();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ email, password, firstName: firstName || undefined, lastName: lastName || undefined });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">{t("admin.first_name")}</Label>
+          <Input
+            id="firstName"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="bg-background border-white/10"
+            placeholder={t("admin.first_name_placeholder")}
+            data-testid="input-create-first-name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">{t("admin.last_name")}</Label>
+          <Input
+            id="lastName"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            className="bg-background border-white/10"
+            placeholder={t("admin.last_name_placeholder")}
+            data-testid="input-create-last-name"
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">{t("admin.email")}</Label>
+        <Input
+          id="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="bg-background border-white/10"
+          placeholder="user@example.com"
+          data-testid="input-create-email"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">{t("admin.password")}</Label>
+        <Input
+          id="password"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="bg-background border-white/10"
+          placeholder={t("admin.password_placeholder")}
+          data-testid="input-create-password"
+        />
+        <p className="text-xs text-muted-foreground">{t("admin.password_requirements")}</p>
+      </div>
+      <Button
+        type="submit"
+        className="w-full bg-primary hover:bg-primary/90"
+        disabled={isPending}
+        data-testid="button-submit-create-user"
+      >
+        {isPending ? t("admin.creating") : t("admin.create_account")}
       </Button>
     </form>
   );
