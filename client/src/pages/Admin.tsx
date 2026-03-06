@@ -12,13 +12,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle, UserPlus } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle, UserPlus, Bookmark, FileText, FolderOpen, Maximize2, Minimize2 } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
 import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption } from "@/hooks/use-custom-options";
 import { useAdminFeedback, useDeleteFeedback } from "@/hooks/use-feedback";
-import type { Group, CustomOption, Feedback } from "@shared/schema";
+import type { Group, CustomOption, Feedback, BoardResource } from "@shared/schema";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
 import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey } from "@/lib/profile-options";
@@ -113,7 +113,11 @@ export default function Admin() {
       </header>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 max-w-[1100px]">
+        <TabsList className="grid w-full grid-cols-7 max-w-[1300px]">
+          <TabsTrigger value="board" data-testid="tab-admin-board">
+            <Shield className="w-4 h-4 mr-2" />
+            {t("admin.board_tab")}
+          </TabsTrigger>
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
             {t("admin.users_count", { count: profiles?.length || 0 })}
@@ -139,6 +143,10 @@ export default function Admin() {
             {t("admin.custom_options")}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="board" className="mt-6">
+          <BoardManagement />
+        </TabsContent>
 
         <TabsContent value="users" className="mt-6 space-y-6">
           <div className="flex gap-3 items-center">
@@ -262,6 +270,358 @@ export default function Admin() {
           <CustomOptionsManagement />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function isGoogleDocsUrl(url: string): boolean {
+  return /docs\.google\.com\/(document|spreadsheets|presentation|forms)/.test(url);
+}
+
+function toEmbedUrl(url: string): string {
+  // Convert edit URL to embedded URL
+  return url.replace(/\/edit(\?.*)?$/, "/edit?usp=sharing&embedded=true")
+            .replace(/\/view(\?.*)?$/, "/preview");
+}
+
+const BOARD_CATEGORIES = [
+  { value: "minutes", labelKey: "admin.board_cat_minutes" },
+  { value: "drive", labelKey: "admin.board_cat_drive" },
+  { value: "other", labelKey: "admin.board_cat_other" },
+] as const;
+
+function categoryIcon(category: string) {
+  switch (category) {
+    case "minutes": return <FileText className="w-4 h-4" />;
+    case "drive": return <FolderOpen className="w-4 h-4" />;
+    default: return <Bookmark className="w-4 h-4" />;
+  }
+}
+
+// ── BoardManagement ───────────────────────────────────────────────────────────
+
+function BoardManagement() {
+  useLocale();
+  const { toast } = useToast();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<BoardResource | null>(null);
+  const [embeddedId, setEmbeddedId] = useState<number | null>(null);
+  const [form, setForm] = useState({ title: "", url: "", description: "", category: "other" });
+
+  const { data: resources, isLoading } = useQuery<BoardResource[]>({
+    queryKey: ["/api/admin/board-resources"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await apiRequest("POST", "/api/admin/board-resources", data);
+      if (!res.ok) throw new Error("Failed to create");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/board-resources"] });
+      setAddDialogOpen(false);
+      setForm({ title: "", url: "", description: "", category: "other" });
+      toast({ title: t("admin.board_resource_created") });
+    },
+    onError: () => toast({ title: t("admin.board_resource_create_failed"), variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<BoardResource> }) => {
+      const res = await apiRequest("PATCH", `/api/admin/board-resources/${id}`, data);
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/board-resources"] });
+      setEditingResource(null);
+      toast({ title: t("admin.board_resource_updated") });
+    },
+    onError: () => toast({ title: t("admin.board_resource_update_failed"), variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/board-resources/${id}`, {});
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/board-resources"] });
+      toast({ title: t("admin.board_resource_deleted") });
+    },
+    onError: () => toast({ title: t("admin.board_resource_delete_failed"), variant: "destructive" }),
+  });
+
+  if (isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
+
+  const embeddedResource = embeddedId != null ? resources?.find(r => r.id === embeddedId) : null;
+
+  // Group by category
+  const grouped: Record<string, BoardResource[]> = {};
+  for (const r of resources || []) {
+    if (!grouped[r.category]) grouped[r.category] = [];
+    grouped[r.category].push(r);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-xl font-semibold">{t("admin.board_title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("admin.board_description")}</p>
+        </div>
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-board-resource">
+              <Plus className="w-4 h-4 mr-2" />
+              {t("admin.board_add_resource")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-card border-white/10 sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>{t("admin.board_add_resource")}</DialogTitle>
+              <DialogDescription>{t("admin.board_add_description")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_title")}</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder={t("admin.board_resource_title_placeholder")}
+                  className="bg-background border-white/10"
+                  data-testid="input-board-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_url")}</Label>
+                <Input
+                  value={form.url}
+                  onChange={(e) => setForm({ ...form, url: e.target.value })}
+                  placeholder="https://docs.google.com/..."
+                  className="bg-background border-white/10"
+                  data-testid="input-board-url"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_category")}</Label>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                  <SelectTrigger className="bg-background border-white/10" data-testid="select-board-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOARD_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_description")}</Label>
+                <Input
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder={t("admin.board_resource_description_placeholder")}
+                  className="bg-background border-white/10"
+                  data-testid="input-board-description"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => createMutation.mutate(form)}
+                  disabled={!form.title || !form.url || createMutation.isPending}
+                  data-testid="button-submit-board-resource"
+                >
+                  {createMutation.isPending ? t("admin.saving") : t("admin.board_add_resource")}
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Embedded Google Docs viewer */}
+      {embeddedResource && (
+        <Card className="bg-card border-primary/20">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                {embeddedResource.title}
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" asChild>
+                  <a href={embeddedResource.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {t("admin.board_open_external")}
+                  </a>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEmbeddedId(null)}>
+                  <Minimize2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <iframe
+              src={toEmbedUrl(embeddedResource.url)}
+              className="w-full rounded-b-xl border-0"
+              style={{ height: "70vh" }}
+              allow="autoplay"
+              title={embeddedResource.title}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resource list */}
+      {!resources || resources.length === 0 ? (
+        <Card className="bg-card/30 border-white/5">
+          <CardContent className="p-10 text-center text-muted-foreground">
+            <Bookmark className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            {t("admin.board_no_resources")}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {BOARD_CATEGORIES.map(({ value, labelKey }) => {
+            const items = grouped[value] || [];
+            if (items.length === 0) return null;
+            return (
+              <div key={value} className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  {categoryIcon(value)}
+                  {t(labelKey)}
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map((resource) => (
+                    <Card
+                      key={resource.id}
+                      className={`bg-card border-white/10 transition-colors hover:border-primary/30 ${embeddedId === resource.id ? "border-primary/50" : ""}`}
+                      data-testid={`card-board-resource-${resource.id}`}
+                    >
+                      <CardContent className="p-4 flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{resource.title}</p>
+                            {resource.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{resource.description}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Dialog open={editingResource?.id === resource.id} onOpenChange={(open) => !open && setEditingResource(null)}>
+                              <DialogTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingResource({ ...resource })} data-testid={`button-edit-board-${resource.id}`}>
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="bg-card border-white/10 sm:max-w-[480px]">
+                                <DialogHeader>
+                                  <DialogTitle>{t("admin.board_edit_resource")}</DialogTitle>
+                                </DialogHeader>
+                                {editingResource && (
+                                  <div className="space-y-4">
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_title")}</Label>
+                                      <Input
+                                        value={editingResource.title}
+                                        onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
+                                        className="bg-background border-white/10"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_url")}</Label>
+                                      <Input
+                                        value={editingResource.url}
+                                        onChange={(e) => setEditingResource({ ...editingResource, url: e.target.value })}
+                                        className="bg-background border-white/10"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_category")}</Label>
+                                      <Select value={editingResource.category} onValueChange={(v) => setEditingResource({ ...editingResource, category: v })}>
+                                        <SelectTrigger className="bg-background border-white/10">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {BOARD_CATEGORIES.map((c) => (
+                                            <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_description")}</Label>
+                                      <Input
+                                        value={editingResource.description ?? ""}
+                                        onChange={(e) => setEditingResource({ ...editingResource, description: e.target.value })}
+                                        className="bg-background border-white/10"
+                                      />
+                                    </div>
+                                    <DialogFooter>
+                                      <Button variant="outline" onClick={() => setEditingResource(null)}>{t("admin.cancel")}</Button>
+                                      <Button
+                                        onClick={() => updateMutation.mutate({ id: editingResource.id, data: { title: editingResource.title, url: editingResource.url, description: editingResource.description, category: editingResource.category } })}
+                                        disabled={updateMutation.isPending}
+                                        data-testid="button-save-board-resource"
+                                      >
+                                        {updateMutation.isPending ? t("admin.saving") : t("admin.save_changes")}
+                                      </Button>
+                                    </DialogFooter>
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => deleteMutation.mutate(resource.id)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-board-${resource.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="flex-1 text-xs h-8" asChild>
+                            <a href={resource.url} target="_blank" rel="noopener noreferrer" data-testid={`button-open-board-${resource.id}`}>
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              {t("admin.board_open")}
+                            </a>
+                          </Button>
+                          {isGoogleDocsUrl(resource.url) && (
+                            <Button
+                              size="sm"
+                              variant={embeddedId === resource.id ? "default" : "secondary"}
+                              className="flex-1 text-xs h-8"
+                              onClick={() => setEmbeddedId(embeddedId === resource.id ? null : resource.id)}
+                              data-testid={`button-embed-board-${resource.id}`}
+                            >
+                              {embeddedId === resource.id
+                                ? <><Minimize2 className="w-3 h-3 mr-1" />{t("admin.board_close_embed")}</>
+                                : <><Maximize2 className="w-3 h-3 mr-1" />{t("admin.board_embed")}</>
+                              }
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {/* uncategorized "other" already covered above; extra safety for unknown categories */}
+        </div>
+      )}
     </div>
   );
 }

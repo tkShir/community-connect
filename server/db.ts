@@ -24,3 +24,30 @@ export const pool = new Pool({
   ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : false,
 });
 export const db = drizzle(pool, { schema });
+
+/**
+ * Run lightweight schema migrations for tables added after initial db:push.
+ * Each statement is idempotent (IF NOT EXISTS / IF NOT).
+ */
+export async function runMigrations(): Promise<void> {
+  const client = await pool.connect();
+  try {
+    // board_resources table (added in step 5)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS board_resources (
+        id          SERIAL PRIMARY KEY,
+        title       TEXT NOT NULL,
+        url         TEXT NOT NULL,
+        description TEXT,
+        category    TEXT NOT NULL DEFAULT 'other',
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        created_at  TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at  TIMESTAMP NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    // matches: allow 'awaiting_admin' status (step 4 – text column, no constraint needed)
+  } finally {
+    client.release();
+  }
+}

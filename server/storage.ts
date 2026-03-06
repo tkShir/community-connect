@@ -1,6 +1,6 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications, events, groups, customOptions, feedback,
+  profiles, matches, notifications, events, groups, customOptions, feedback, boardResources,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
   type MatchWithProfile, type MatchWithBothProfiles,
@@ -8,6 +8,7 @@ import {
   type Group, type InsertGroup,
   type CustomOption,
   type Feedback, type InsertFeedback,
+  type BoardResource, type InsertBoardResource,
 } from "@shared/schema";
 import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
 import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
@@ -133,6 +134,12 @@ export interface IStorage {
   approveGroup(id: number): Promise<Group | undefined>;
   denyGroup(id: number, reason: string): Promise<Group | undefined>;
   deleteGroup(id: number): Promise<void>;
+
+  // Board Resources
+  getBoardResources(): Promise<BoardResource[]>;
+  createBoardResource(resource: InsertBoardResource): Promise<BoardResource>;
+  updateBoardResource(id: number, resource: Partial<InsertBoardResource>): Promise<BoardResource | undefined>;
+  deleteBoardResource(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -436,6 +443,27 @@ export class DatabaseStorage implements IStorage {
         createdBy: userId,
       });
     }
+  }
+
+  async getBoardResources(): Promise<BoardResource[]> {
+    return await db.select().from(boardResources).orderBy(boardResources.sortOrder, boardResources.createdAt);
+  }
+
+  async createBoardResource(resource: InsertBoardResource): Promise<BoardResource> {
+    const [created] = await db.insert(boardResources).values(resource).returning();
+    return created;
+  }
+
+  async updateBoardResource(id: number, resource: Partial<InsertBoardResource>): Promise<BoardResource | undefined> {
+    const [updated] = await db.update(boardResources)
+      .set({ ...resource, updatedAt: new Date() })
+      .where(eq(boardResources.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBoardResource(id: number): Promise<void> {
+    await db.delete(boardResources).where(eq(boardResources.id, id));
   }
 }
 

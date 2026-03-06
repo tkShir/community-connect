@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, varchar, jsonb } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -90,6 +90,17 @@ export const feedback = pgTable("feedback", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const boardResources = pgTable("board_resources", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  url: text("url").notNull(),
+  description: text("description"),
+  category: text("category").default("other").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // === RELATIONS ===
 
 export const profilesRelations = relations(profiles, ({ one, many }) => ({
@@ -158,6 +169,7 @@ export const insertEventSchema = createInsertSchema(events).omit({ id: true, cre
 export const insertGroupSchema = createInsertSchema(groups).omit({ id: true, createdAt: true, status: true, denialReason: true, creatorId: true, createdByAdmin: true });
 export const insertCustomOptionSchema = createInsertSchema(customOptions).omit({ id: true, createdAt: true });
 export const insertFeedbackSchema = createInsertSchema(feedback).omit({ id: true, createdAt: true, userId: true });
+export const insertBoardResourceSchema = createInsertSchema(boardResources).omit({ id: true, createdAt: true, updatedAt: true });
 
 // === EXPLICIT API CONTRACT TYPES ===
 
@@ -180,6 +192,9 @@ export type InsertCustomOption = z.infer<typeof insertCustomOptionSchema>;
 
 export type Feedback = typeof feedback.$inferSelect;
 export type InsertFeedback = z.infer<typeof insertFeedbackSchema>;
+
+export type BoardResource = typeof boardResources.$inferSelect;
+export type InsertBoardResource = z.infer<typeof insertBoardResourceSchema>;
 
 export type MatchWithProfile = Match & {
   partnerProfile: Profile;

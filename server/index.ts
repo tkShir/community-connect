@@ -3,6 +3,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 import { setupAuth0 } from "./auth0";
+import { runMigrations } from "./db";
 
 export const app = express();
 const httpServer = createServer(app);
@@ -69,6 +70,7 @@ export async function initialize(): Promise<void> {
   if (_initialized) return;
   _initialized = true;
 
+  await runMigrations();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

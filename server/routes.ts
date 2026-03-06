@@ -317,6 +317,55 @@ export async function registerRoutes(
     }
   });
 
+  // === Board Resources Routes (admin only) ===
+
+  app.get("/api/admin/board-resources", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    const resources = await storage.getBoardResources();
+    res.json(resources);
+  });
+
+  app.post("/api/admin/board-resources", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const { title, url, description, category, sortOrder } = req.body;
+      if (!title || !url) return res.status(400).json({ message: "title and url are required" });
+      const resource = await storage.createBoardResource({ title, url, description: description || null, category: category || "other", sortOrder: sortOrder ?? 0 });
+      res.status(201).json(resource);
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/board-resources/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const updated = await storage.updateBoardResource(Number(req.params.id), req.body);
+      if (!updated) return res.status(404).json({ message: "Resource not found" });
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/board-resources/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    await storage.deleteBoardResource(Number(req.params.id));
+    res.json({ success: true });
+  });
+
   // === Events Routes ===
 
   // Get all published events (public) - returns enriched data with creator info
