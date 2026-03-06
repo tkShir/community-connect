@@ -7,6 +7,7 @@ export const profileInputSchema = insertProfileSchema.extend({
   careerStatus: z.string().min(1, "Select your career status"),
   interests: z.array(z.string()).min(1, "Select at least one interest"),
   hobbies: z.array(z.string()).min(1, "Select at least one hobby"),
+  goal: z.array(z.string()).optional().default([]),
 });
 
 export const adminProfileUpdateSchema = z.object({

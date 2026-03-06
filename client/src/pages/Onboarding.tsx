@@ -36,6 +36,7 @@ const formSchema = insertProfileSchema.extend({
   careerStatus: z.string().min(1, t("onboarding.select_career_status")),
   interests: z.array(z.string()).min(1, t("onboarding.select_interest")),
   hobbies: z.array(z.string()).min(1, t("onboarding.select_hobby")),
+  goal: z.array(z.string()).optional().default([]),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -69,6 +70,7 @@ export default function Onboarding() {
       ageRange: "",
       contactMethod: "",
       contactValue: "",
+      goal: [],
     },
   });
 
@@ -87,6 +89,7 @@ export default function Onboarding() {
         ageRange: migrateToKey(existingProfile.ageRange),
         contactMethod: migrateToKey(existingProfile.contactMethod),
         contactValue: existingProfile.contactValue,
+        goal: existingProfile.goal ?? [],
       });
     }
   }, [existingProfile, form]);
