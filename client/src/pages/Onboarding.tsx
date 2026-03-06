@@ -3,6 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProfileSchema, type InsertProfile } from "@shared/schema";
 import { useUpdateProfile, useMyProfile } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { api } from "@shared/routes";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,6 +50,7 @@ export default function Onboarding() {
   const { data: existingProfile } = useMyProfile();
   const { mutate, isPending } = useUpdateProfile();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   useCustomOptions(); // populate custom options cache
 
   const professionOptions = [...buildOptions(PROFESSION_KEYS), ...buildCustomOptions("profession")];
@@ -95,11 +98,13 @@ export default function Onboarding() {
   }, [existingProfile, form]);
 
   const onSubmit = (data: FormData) => {
+    const isFirstProfile = !existingProfile;
     mutate(data as InsertProfile, {
-      onSuccess: () => {
-        setTimeout(() => {
+      onSuccess: async () => {
+        await queryClient.refetchQueries({ queryKey: [api.profiles.me.path] });
+        if (isFirstProfile) {
           setLocation("/discover");
-        }, 100);
+        }
       },
     });
   };
