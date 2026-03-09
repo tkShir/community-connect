@@ -5,16 +5,17 @@ import { useUpdateProfile, useMyProfile } from "@/hooks/use-profiles";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@shared/routes";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { TagInput } from "@/components/TagInput";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
@@ -30,7 +31,7 @@ import {
   migrateToKey,
   migrateArrayToKeys,
 } from "@/lib/profile-options";
-import { useCustomOptions } from "@/hooks/use-custom-options";
+import { useCustomOptions, useCreateCustomOption } from "@/hooks/use-custom-options";
 
 const formSchema = insertProfileSchema.extend({
   alias: z.string().min(1, t("onboarding.alias_required")).min(2, t("onboarding.alias_min_length")),
@@ -51,7 +52,13 @@ export default function Onboarding() {
   const { mutate, isPending } = useUpdateProfile();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-  useCustomOptions(); // populate custom options cache
+  const { refetch: refetchCustomOptions } = useCustomOptions(); // populate custom options cache
+  const { mutate: createCustomOption, isPending: isCreatingOption } = useCreateCustomOption();
+
+  // Add new profession dialog state
+  const [showAddProfessionDialog, setShowAddProfessionDialog] = useState(false);
+  const [newProfessionJa, setNewProfessionJa] = useState("");
+  const [newProfessionEn, setNewProfessionEn] = useState("");
 
   const professionOptions = [...buildOptions(PROFESSION_KEYS), ...buildCustomOptions("profession")];
   const careerStatusOptions = buildOptions(CAREER_STATUS_KEYS);
@@ -222,8 +229,17 @@ export default function Onboarding() {
                         options={professionOptions}
                         placeholder={t("onboarding.profession_placeholder")}
                         data-testid="input-profession"
+                        addNewLabel={t("onboarding.profession_add_new")}
+                        onAddNew={() => {
+                          setNewProfessionJa("");
+                          setNewProfessionEn("");
+                          setShowAddProfessionDialog(true);
+                        }}
                       />
                     </FormControl>
+                    <FormDescription className="text-xs text-muted-foreground">
+                      {t("onboarding.profession_help")}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -382,6 +398,71 @@ export default function Onboarding() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Add new profession dialog */}
+      <Dialog open={showAddProfessionDialog} onOpenChange={setShowAddProfessionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("onboarding.profession_add_new_title")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("onboarding.profession_add_new_ja")}</label>
+              <Input
+                value={newProfessionJa}
+                onChange={(e) => setNewProfessionJa(e.target.value)}
+                placeholder={t("onboarding.profession_add_new_ja_placeholder")}
+                className="bg-background border-white/10"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">{t("onboarding.profession_add_new_en")}</label>
+              <Input
+                value={newProfessionEn}
+                onChange={(e) => setNewProfessionEn(e.target.value)}
+                placeholder={t("onboarding.profession_add_new_en_placeholder")}
+                className="bg-background border-white/10"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowAddProfessionDialog(false)}
+            >
+              {t("events.cancel")}
+            </Button>
+            <Button
+              type="button"
+              disabled={!newProfessionJa.trim() || !newProfessionEn.trim() || isCreatingOption}
+              onClick={() => {
+                createCustomOption(
+                  { category: "profession", labelJa: newProfessionJa.trim(), labelEn: newProfessionEn.trim() },
+                  {
+                    onSuccess: async (option) => {
+                      // Refresh cache so new option appears in the dropdown
+                      await refetchCustomOptions();
+                      // Auto-select the newly created option
+                      const current = form.getValues("profession") || [];
+                      if (!current.includes(option.originalValue)) {
+                        form.setValue("profession", [...current, option.originalValue]);
+                      }
+                      setShowAddProfessionDialog(false);
+                    },
+                  }
+                );
+              }}
+            >
+              {isCreatingOption ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("onboarding.saving")}</>
+              ) : (
+                t("onboarding.add_option")
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

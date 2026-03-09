@@ -5,6 +5,18 @@ import { setCustomOptionsCache } from "@/lib/profile-options";
 
 const QUERY_KEY = ["/api/custom-options"];
 
+export function useCreateCustomOption() {
+  return useMutation({
+    mutationFn: async (data: { category: string; labelJa: string; labelEn: string }): Promise<CustomOption> => {
+      const response = await apiRequest("POST", "/api/custom-options", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+
 export function useCustomOptions() {
   return useQuery<CustomOption[]>({
     queryKey: QUERY_KEY,

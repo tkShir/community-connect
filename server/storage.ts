@@ -116,6 +116,7 @@ export interface IStorage {
   getCustomOptionsByCategory(category: string): Promise<CustomOption[]>;
   updateCustomOption(id: number, update: { labelEn?: string; labelJa?: string }): Promise<CustomOption | undefined>;
   deleteCustomOption(id: number): Promise<void>;
+  createOrGetCustomOption(category: OptionCategory, key: string, labelEn: string, labelJa: string, userId: string): Promise<CustomOption>;
   registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void>;
 
   // Feedback
@@ -426,6 +427,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCustomOption(id: number): Promise<void> {
     await db.delete(customOptions).where(eq(customOptions.id, id));
+  }
+
+  async createOrGetCustomOption(category: OptionCategory, key: string, labelEn: string, labelJa: string, userId: string): Promise<CustomOption> {
+    const [existing] = await db.select().from(customOptions)
+      .where(and(eq(customOptions.category, category), eq(customOptions.originalValue, key)));
+    if (existing) return existing;
+    const [created] = await db.insert(customOptions).values({
+      category,
+      originalValue: key,
+      labelEn,
+      labelJa,
+      createdBy: userId,
+    }).returning();
+    return created;
   }
 
   async registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void> {

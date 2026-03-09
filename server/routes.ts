@@ -223,6 +223,30 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/custom-options — authenticated users can create a new custom option
+  app.post("/api/custom-options", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = req.user!.id;
+    const { category, labelJa, labelEn } = req.body;
+    if (!category || !labelJa || !labelEn) {
+      return res.status(400).json({ message: "category, labelJa, and labelEn are required" });
+    }
+    if (!["profession", "interests", "hobbies"].includes(category)) {
+      return res.status(400).json({ message: "Invalid category" });
+    }
+    try {
+      // Generate a stable key from the English label
+      const baseKey = labelEn.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      const key = `custom_${baseKey}`;
+      // Upsert: if key already exists in this category, return existing
+      const option = await storage.createOrGetCustomOption(category as any, key, labelEn, labelJa, userId);
+      res.json(option);
+    } catch (err) {
+      console.error("Failed to create custom option:", err);
+      res.status(500).json({ message: "Failed to create custom option" });
+    }
+  });
+
   // === Admin Routes ===
 
   // Admin: Get pending connection requests (awaiting_admin)
