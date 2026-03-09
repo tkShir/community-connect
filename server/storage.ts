@@ -10,7 +10,7 @@ import {
   type Feedback, type InsertFeedback,
   type BoardResource, type InsertBoardResource,
 } from "@shared/schema";
-import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
+import { eq, or, and, ne, notInArray, desc, sql } from "drizzle-orm";
 import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
 
 /**
@@ -113,10 +113,12 @@ export interface IStorage {
 
   // Custom Options
   getCustomOptions(): Promise<CustomOption[]>;
+  getAdminCustomOptions(): Promise<(CustomOption & { createdByAlias: string | null })[]>;
   getCustomOptionsByCategory(category: string): Promise<CustomOption[]>;
   updateCustomOption(id: number, update: { labelEn?: string; labelJa?: string }): Promise<CustomOption | undefined>;
   deleteCustomOption(id: number): Promise<void>;
   createOrGetCustomOption(category: OptionCategory, key: string, labelEn: string, labelJa: string, userId: string): Promise<CustomOption>;
+  mergeCustomOption(id: number, targetKey: string): Promise<void>;
   registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void>;
 
   // Feedback
@@ -414,6 +416,48 @@ export class DatabaseStorage implements IStorage {
 
   async getCustomOptions(): Promise<CustomOption[]> {
     return await db.select().from(customOptions).orderBy(customOptions.category, customOptions.originalValue);
+  }
+
+  async getAdminCustomOptions(): Promise<(CustomOption & { createdByAlias: string | null })[]> {
+    const rows = await db
+      .select({
+        id: customOptions.id,
+        category: customOptions.category,
+        originalValue: customOptions.originalValue,
+        labelEn: customOptions.labelEn,
+        labelJa: customOptions.labelJa,
+        createdBy: customOptions.createdBy,
+        createdAt: customOptions.createdAt,
+        createdByAlias: profiles.alias,
+      })
+      .from(customOptions)
+      .leftJoin(profiles, eq(profiles.userId, customOptions.createdBy))
+      .orderBy(customOptions.category, customOptions.originalValue);
+    return rows;
+  }
+
+  async mergeCustomOption(id: number, targetKey: string): Promise<void> {
+    const [opt] = await db.select().from(customOptions).where(eq(customOptions.id, id));
+    if (!opt) return;
+    const oldKey = opt.originalValue;
+    const cat = opt.category;
+    // Replace oldKey with targetKey in all profiles for the relevant category column.
+    // array_replace(arr, old, new) is safe with parameterised values; the ANY check
+    // uses a cast so Postgres won't complain about type mismatch with text[].
+    if (cat === "profession") {
+      await db.execute(
+        sql`UPDATE profiles SET profession = array_replace(profession, ${oldKey}::text, ${targetKey}::text) WHERE ${oldKey}::text = ANY(profession)`
+      );
+    } else if (cat === "interests") {
+      await db.execute(
+        sql`UPDATE profiles SET interests = array_replace(interests, ${oldKey}::text, ${targetKey}::text) WHERE ${oldKey}::text = ANY(interests)`
+      );
+    } else if (cat === "hobbies") {
+      await db.execute(
+        sql`UPDATE profiles SET hobbies = array_replace(hobbies, ${oldKey}::text, ${targetKey}::text) WHERE ${oldKey}::text = ANY(hobbies)`
+      );
+    }
+    await db.delete(customOptions).where(eq(customOptions.id, id));
   }
 
   async getCustomOptionsByCategory(category: string): Promise<CustomOption[]> {

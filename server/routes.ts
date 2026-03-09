@@ -760,11 +760,32 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Admin access required" });
     }
     try {
-      const options = await storage.getCustomOptions();
+      const options = await storage.getAdminCustomOptions();
       res.json(options);
     } catch (err) {
       console.warn("Failed to fetch admin custom options (table may not exist yet):", err);
       res.json([]);
+    }
+  });
+
+  app.post("/api/admin/custom-options/:id/merge", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const optionId = Number(req.params.id);
+      const { targetKey } = req.body;
+      if (!targetKey || typeof targetKey !== "string") {
+        return res.status(400).json({ message: "targetKey is required" });
+      }
+      await storage.mergeCustomOption(optionId, targetKey);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Failed to merge custom option:", err);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

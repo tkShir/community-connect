@@ -12,16 +12,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle, UserPlus, Bookmark, FileText, FolderOpen, Maximize2, Minimize2 } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle, UserPlus, Bookmark, FileText, FolderOpen, Maximize2, Minimize2, GitMerge } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
-import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption } from "@/hooks/use-custom-options";
+import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption, useMergeCustomOption, type CustomOptionWithCreator } from "@/hooks/use-custom-options";
 import { useAdminFeedback, useDeleteFeedback } from "@/hooks/use-feedback";
 import type { Group, CustomOption, Feedback, BoardResource } from "@shared/schema";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
-import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey } from "@/lib/profile-options";
+import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey, PROFESSION_KEYS, INTEREST_KEYS, HOBBY_KEYS } from "@/lib/profile-options";
 
 export default function Admin() {
   useLocale();
@@ -1782,10 +1782,13 @@ function CustomOptionsManagement() {
   const { data: customOptions, isLoading } = useAdminCustomOptions();
   const { mutate: updateOption, isPending: isUpdating } = useUpdateCustomOption();
   const { mutate: deleteOption, isPending: isDeleting } = useDeleteCustomOption();
+  const { mutate: mergeOption, isPending: isMerging } = useMergeCustomOption();
 
   const [edits, setEdits] = useState<Record<number, { labelEn: string; labelJa: string }>>({});
+  const [mergeTarget, setMergeTarget] = useState<CustomOptionWithCreator | null>(null);
+  const [mergeTargetKey, setMergeTargetKey] = useState("");
 
-  const startEdit = (opt: CustomOption) => {
+  const startEdit = (opt: CustomOptionWithCreator) => {
     setEdits((prev) => ({ ...prev, [opt.id]: { labelEn: opt.labelEn, labelJa: opt.labelJa } }));
   };
 
@@ -1819,6 +1822,21 @@ function CustomOptionsManagement() {
     });
   };
 
+  const handleMerge = () => {
+    if (!mergeTarget || !mergeTargetKey) return;
+    mergeOption(
+      { id: mergeTarget.id, targetKey: mergeTargetKey },
+      {
+        onSuccess: () => {
+          toast({ title: t("admin.custom_option_merged") });
+          setMergeTarget(null);
+          setMergeTargetKey("");
+        },
+        onError: () => toast({ title: t("admin.custom_option_merge_failed"), variant: "destructive" }),
+      }
+    );
+  };
+
   const categoryLabel = (cat: string) => {
     switch (cat) {
       case "profession": return t("admin.category_profession");
@@ -1826,6 +1844,18 @@ function CustomOptionsManagement() {
       case "hobbies": return t("admin.category_hobbies");
       default: return cat;
     }
+  };
+
+  // Build merge target options for a given category: predefined keys + other custom options
+  const getMergeOptions = (cat: string, excludeId: number) => {
+    const predefined = buildOptions(
+      cat === "profession" ? PROFESSION_KEYS :
+      cat === "interests" ? INTEREST_KEYS : HOBBY_KEYS
+    );
+    const otherCustom = (customOptions || [])
+      .filter((o) => o.category === cat && o.id !== excludeId)
+      .map((o) => ({ key: o.originalValue, label: `${o.labelJa} / ${o.labelEn} [カスタム]` }));
+    return [...predefined, ...otherCustom];
   };
 
   if (isLoading) {
@@ -1838,7 +1868,7 @@ function CustomOptionsManagement() {
     );
   }
 
-  const grouped: Record<string, CustomOption[]> = {};
+  const grouped: Record<string, CustomOptionWithCreator[]> = {};
   for (const opt of customOptions || []) {
     if (!grouped[opt.category]) grouped[opt.category] = [];
     grouped[opt.category].push(opt);
@@ -1870,22 +1900,46 @@ function CustomOptionsManagement() {
                     <Card key={opt.id} className="bg-card border-white/10" data-testid={`card-custom-option-${opt.id}`}>
                       <CardContent className="p-4">
                         <div className="flex flex-col gap-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-mono text-sm text-muted-foreground">{t("admin.key")}:</span>{" "}
-                              <span className="font-semibold">{opt.originalValue}</span>
+                          {/* Header row: key + creator + actions */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <div>
+                                <span className="font-mono text-sm text-muted-foreground">{t("admin.key")}:</span>{" "}
+                                <span className="font-semibold">{opt.originalValue}</span>
+                              </div>
+                              {opt.createdByAlias && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <UserCircle className="w-3 h-3" />
+                                  <span>{t("admin.created_by")}: {opt.createdByAlias}</span>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 shrink-0">
                               {!editing && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => startEdit(opt)}
-                                  data-testid={`button-edit-option-${opt.id}`}
-                                >
-                                  <Edit className="w-4 h-4 mr-1" />
-                                  {t("admin.edit")}
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => startEdit(opt)}
+                                    data-testid={`button-edit-option-${opt.id}`}
+                                  >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    {t("admin.edit")}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-blue-400 border-blue-400/30 hover:bg-blue-400/10"
+                                    onClick={() => {
+                                      setMergeTarget(opt);
+                                      setMergeTargetKey("");
+                                    }}
+                                    data-testid={`button-merge-option-${opt.id}`}
+                                  >
+                                    <GitMerge className="w-4 h-4 mr-1" />
+                                    {t("admin.merge")}
+                                  </Button>
+                                </>
                               )}
                               <Button
                                 size="icon"
@@ -1975,6 +2029,58 @@ function CustomOptionsManagement() {
           {t("admin.no_custom_options_global")}
         </div>
       )}
+
+      {/* Merge dialog */}
+      <Dialog open={!!mergeTarget} onOpenChange={(open) => { if (!open) { setMergeTarget(null); setMergeTargetKey(""); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("admin.merge_option_title")}</DialogTitle>
+            <DialogDescription>{t("admin.merge_option_description")}</DialogDescription>
+          </DialogHeader>
+          {mergeTarget && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-md border border-white/10 bg-background/50 p-3 text-sm space-y-1">
+                <p className="font-medium">{t("admin.merge_source")}:</p>
+                <p><span className="text-muted-foreground">{t("admin.label_ja")}:</span> {mergeTarget.labelJa}</p>
+                <p><span className="text-muted-foreground">{t("admin.label_en")}:</span> {mergeTarget.labelEn}</p>
+                <p><span className="text-muted-foreground">{t("admin.key")}:</span> <code className="font-mono text-xs">{mergeTarget.originalValue}</code></p>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.merge_into")}</Label>
+                <Select value={mergeTargetKey} onValueChange={setMergeTargetKey}>
+                  <SelectTrigger className="bg-background border-white/10">
+                    <SelectValue placeholder={t("admin.merge_select_target")} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {getMergeOptions(mergeTarget.category, mergeTarget.id).map((opt) => (
+                      <SelectItem key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("admin.merge_warning")}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setMergeTarget(null); setMergeTargetKey(""); }}>
+              {t("admin.cancel")}
+            </Button>
+            <Button
+              disabled={!mergeTargetKey || isMerging}
+              onClick={handleMerge}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isMerging ? (
+                <><Skeleton className="w-4 h-4 mr-2 rounded-full" />{t("admin.merging")}</>
+              ) : (
+                <><GitMerge className="w-4 h-4 mr-2" />{t("admin.merge_confirm")}</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
