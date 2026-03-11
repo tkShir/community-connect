@@ -11,6 +11,7 @@ import type { CustomOption } from "@shared/schema";
 // Re-export key arrays from shared module
 export {
   PROFESSION_KEYS,
+  CAREER_STATUS_KEYS,
   GOAL_KEYS,
   INTEREST_KEYS,
   HOBBY_KEYS,

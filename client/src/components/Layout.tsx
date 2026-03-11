@@ -49,9 +49,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navItems = [
     { href: "/discover", label: t("layout.discover"), icon: Compass },
     { href: "/suggested", label: t("layout.suggested"), icon: Lightbulb },
-    { href: "/connections", label: t("layout.connections"), icon: Users },
-    { href: "/events", label: t("layout.events"), icon: Calendar },
-    { href: "/groups", label: t("layout.groups"), icon: UsersRound },
+    // { href: "/connections", label: t("layout.connections"), icon: Users },   // 一時非表示
+    // { href: "/events", label: t("layout.events"), icon: Calendar },          // 一時非表示
+    // { href: "/groups", label: t("layout.groups"), icon: UsersRound },        // 一時非表示
     { href: "/profile", label: t("layout.my_profile"), icon: UserCircle },
     { href: "/feedback", label: t("layout.feedback"), icon: MessageSquare },
     ...(profile?.isAdmin ? [{ href: "/admin", label: t("layout.admin"), icon: Shield }] : []),

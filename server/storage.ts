@@ -1,16 +1,71 @@
 import { db } from "./db";
 import {
-  profiles, matches, notifications, events, groups, customOptions, feedback,
+  profiles, matches, notifications, events, groups, customOptions, feedback, boardResources,
   type Profile, type InsertProfile,
   type Match, type InsertMatch,
-  type MatchWithProfile,
+  type MatchWithProfile, type MatchWithBothProfiles,
   type Event, type InsertEvent,
   type Group, type InsertGroup,
   type CustomOption,
   type Feedback, type InsertFeedback,
+  type BoardResource, type InsertBoardResource,
 } from "@shared/schema";
-import { eq, or, and, ne, notInArray, desc } from "drizzle-orm";
+import { eq, or, and, ne, notInArray, desc, sql } from "drizzle-orm";
 import { isPredefinedKey, type OptionCategory } from "@shared/profile-keys";
+
+/**
+ * Career status compatibility matrix.
+ * Returns a bonus score (0–3) when two career statuses are professionally compatible.
+ * Students get a higher bonus when matched with experienced professionals.
+ */
+function careerStatusCompatibility(a: string, b: string): number {
+  const normalize = (s: string) => (s ?? "career_other").toLowerCase();
+  const ma = normalize(a);
+  const mb = normalize(b);
+
+  // Identical status → strong peer match
+  if (ma === mb) return 3;
+
+  // Students benefit most from meeting experienced professionals
+  if ((ma === "career_student" && (mb === "career_company_employee" || mb === "career_family_business" || mb === "career_executive")) ||
+      (mb === "career_student" && (ma === "career_company_employee" || ma === "career_family_business" || ma === "career_executive"))) {
+    return 2;
+  }
+
+  // Cross-sector connections (company ↔ family business, company ↔ executive, etc.)
+  if ((ma === "career_company_employee" && (mb === "career_family_business" || mb === "career_executive")) ||
+      (mb === "career_company_employee" && (ma === "career_family_business" || ma === "career_executive"))) {
+    return 2;
+  }
+
+  if ((ma === "career_family_business" && mb === "career_executive") ||
+      (mb === "career_family_business" && ma === "career_executive")) {
+    return 2;
+  }
+
+  return 1; // any other combination still has some value
+}
+
+/**
+ * Professional match score between two profiles (higher = better match).
+ * Weights: profession overlap (×4) > interest overlap (×3) > career status compat (×2) > hobby overlap (×1)
+ */
+function computeMatchScore(me: Profile, other: Profile): number {
+  const myProfessions = Array.isArray(me.profession) ? me.profession : [me.profession];
+  const myInterests   = Array.isArray(me.interests)  ? me.interests  : [me.interests];
+  const myHobbies     = Array.isArray(me.hobbies)    ? me.hobbies    : [me.hobbies];
+
+  const theirProfessions = Array.isArray(other.profession) ? other.profession : [other.profession];
+  const theirInterests   = Array.isArray(other.interests)  ? other.interests  : [other.interests];
+  const theirHobbies     = Array.isArray(other.hobbies)    ? other.hobbies    : [other.hobbies];
+
+  const professionMatch = myProfessions.filter(p => theirProfessions.includes(p)).length;
+  const interestMatch   = myInterests.filter(i => theirInterests.includes(i)).length;
+  const hobbyMatch      = myHobbies.filter(h => theirHobbies.includes(h)).length;
+  const careerBonus     = careerStatusCompatibility(me.careerStatus ?? "career_other", other.careerStatus ?? "career_other");
+
+  return (professionMatch * 4) + (interestMatch * 3) + (careerBonus * 2) + hobbyMatch;
+}
 
 export type EventWithCreator = Event & {
   creatorAlias: string | null;
@@ -30,11 +85,13 @@ export interface IStorage {
 
   // Matches
   createMatch(match: InsertMatch): Promise<Match>;
-  updateMatchStatus(id: number, status: "accepted" | "rejected"): Promise<Match | undefined>;
+  updateMatchStatus(id: number, status: "awaiting_admin" | "pending" | "accepted" | "rejected"): Promise<Match | undefined>;
   getMatchesForProfile(profileId: number): Promise<MatchWithProfile[]>;
   getPotentialMatches(profileId: number): Promise<Profile[]>;
   getSuggestedMatches(profileId: number): Promise<Profile[]>;
   getMatch(id: number): Promise<Match | undefined>;
+  getPendingAdminMatches(): Promise<MatchWithBothProfiles[]>;
+  getAdminUserIds(): Promise<string[]>;
 
   // Notifications
   createNotification(userId: string, content: string): Promise<any>;
@@ -56,9 +113,12 @@ export interface IStorage {
 
   // Custom Options
   getCustomOptions(): Promise<CustomOption[]>;
+  getAdminCustomOptions(): Promise<(CustomOption & { createdByAlias: string | null })[]>;
   getCustomOptionsByCategory(category: string): Promise<CustomOption[]>;
   updateCustomOption(id: number, update: { labelEn?: string; labelJa?: string }): Promise<CustomOption | undefined>;
   deleteCustomOption(id: number): Promise<void>;
+  createOrGetCustomOption(category: OptionCategory, key: string, labelEn: string, labelJa: string, userId: string): Promise<CustomOption>;
+  mergeCustomOption(id: number, targetKey: string): Promise<void>;
   registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void>;
 
   // Feedback
@@ -77,6 +137,12 @@ export interface IStorage {
   approveGroup(id: number): Promise<Group | undefined>;
   denyGroup(id: number, reason: string): Promise<Group | undefined>;
   deleteGroup(id: number): Promise<void>;
+
+  // Board Resources
+  getBoardResources(): Promise<BoardResource[]>;
+  createBoardResource(resource: InsertBoardResource): Promise<BoardResource>;
+  updateBoardResource(id: number, resource: Partial<InsertBoardResource>): Promise<BoardResource | undefined>;
+  deleteBoardResource(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -106,13 +172,31 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMatch(insertMatch: InsertMatch): Promise<Match> {
-    const [match] = await db.insert(matches).values(insertMatch).returning();
+    const [match] = await db.insert(matches).values({ ...insertMatch, status: "awaiting_admin" }).returning();
     return match;
   }
 
-  async updateMatchStatus(id: number, status: "accepted" | "rejected"): Promise<Match | undefined> {
+  async updateMatchStatus(id: number, status: "awaiting_admin" | "pending" | "accepted" | "rejected"): Promise<Match | undefined> {
     const [updated] = await db.update(matches).set({ status }).where(eq(matches.id, id)).returning();
     return updated;
+  }
+
+  async getPendingAdminMatches(): Promise<MatchWithBothProfiles[]> {
+    const pendingMatches = await db.select().from(matches).where(eq(matches.status, "awaiting_admin"));
+    const enriched: MatchWithBothProfiles[] = [];
+    for (const match of pendingMatches) {
+      const initiatorProfile = await this.getProfile(match.initiatorId);
+      const receiverProfile = await this.getProfile(match.receiverId);
+      if (initiatorProfile && receiverProfile) {
+        enriched.push({ ...match, initiatorProfile, receiverProfile });
+      }
+    }
+    return enriched;
+  }
+
+  async getAdminUserIds(): Promise<string[]> {
+    const admins = await db.select({ userId: profiles.userId }).from(profiles).where(eq(profiles.isAdmin, true));
+    return admins.map(a => a.userId);
   }
 
   async getMatch(id: number): Promise<Match | undefined> {
@@ -138,32 +222,9 @@ export class DatabaseStorage implements IStorage {
     const excludedProfileIds = new Set<number>([profileId]);
     existingInteractions.forEach(m => { excludedProfileIds.add(m.initiatorId); excludedProfileIds.add(m.receiverId); });
     const potential = await db.select().from(profiles).where(notInArray(profiles.id, Array.from(excludedProfileIds)));
-    
-    const myGoals = Array.isArray(myProfile.goal) ? myProfile.goal : [myProfile.goal];
-    
+
     return potential.map(p => {
-      let score = 0;
-      
-      if (myGoals.some(g => g.toLowerCase().includes('networking'))) {
-        const professionMatch = p.profession.filter(prof => myProfile.profession.includes(prof)).length;
-        const interestMatch = p.interests.filter(i => myProfile.interests.includes(i)).length;
-        score += (professionMatch * 3) + (interestMatch * 2);
-      }
-      
-      if (myGoals.some(g => g.toLowerCase().includes('friendship') || g.toLowerCase().includes('social'))) {
-        const hobbyMatch = p.hobbies.filter(h => myProfile.hobbies.includes(h)).length;
-        const sameAge = p.ageRange === myProfile.ageRange ? 1 : 0;
-        score += (hobbyMatch * 2) + (sameAge * 3);
-      }
-      
-      if (myGoals.some(g => g.toLowerCase().includes('activity') || g.toLowerCase().includes('partner'))) {
-        const hobbyMatch = p.hobbies.filter(h => myProfile.hobbies.includes(h)).length;
-        score += hobbyMatch * 3;
-      }
-      
-      const interestMatch = p.interests.filter(i => myProfile.interests.includes(i)).length;
-      score += interestMatch;
-      
+      const score = computeMatchScore(myProfile, p);
       return { profile: p, score };
     }).sort((a, b) => b.score - a.score).map(item => item.profile);
   }
@@ -176,50 +237,12 @@ export class DatabaseStorage implements IStorage {
     existingInteractions.forEach(m => { excludedProfileIds.add(m.initiatorId); excludedProfileIds.add(m.receiverId); });
 
     const allProfiles = await db.select().from(profiles).where(notInArray(profiles.id, Array.from(excludedProfileIds)));
-    
-    const myProfessions = Array.isArray(myProfile.profession) ? myProfile.profession : [myProfile.profession];
-    const myGoals = Array.isArray(myProfile.goal) ? myProfile.goal : [myProfile.goal];
-    const myInterests = Array.isArray(myProfile.interests) ? myProfile.interests : [myProfile.interests];
-    const myHobbies = Array.isArray(myProfile.hobbies) ? myProfile.hobbies : [myProfile.hobbies];
-    const myAgeRange = myProfile.ageRange;
-    
-    const normalizeGoal = (g: string) => g.toLowerCase().trim();
-    
-    const iWantMentor = myGoals.some(g => normalizeGoal(g).includes('mentor') && !normalizeGoal(g).includes('mentee'));
-    const iWantMentee = myGoals.some(g => normalizeGoal(g).includes('mentee'));
-    const iWantNetworking = myGoals.some(g => normalizeGoal(g).includes('professional') || normalizeGoal(g).includes('networking'));
-    const iWantFriendship = myGoals.some(g => normalizeGoal(g).includes('friendship') || normalizeGoal(g).includes('social'));
-    const iWantActivityPartner = myGoals.some(g => normalizeGoal(g).includes('activity') || normalizeGoal(g).includes('partner'));
-    
-    return allProfiles.filter(p => {
-      const pProfessions = Array.isArray(p.profession) ? p.profession : [p.profession];
-      const pGoals = Array.isArray(p.goal) ? p.goal : [p.goal];
-      const pInterests = Array.isArray(p.interests) ? p.interests : [p.interests];
-      const pHobbies = Array.isArray(p.hobbies) ? p.hobbies : [p.hobbies];
-      
-      const hasCommonProfession = myProfessions.some(mp => pProfessions.some(pp => mp.toLowerCase() === pp.toLowerCase()));
-      const hasCommonInterests = myInterests.some(mi => pInterests.some(pi => mi.toLowerCase() === pi.toLowerCase()));
-      const hasCommonHobbies = myHobbies.some(mh => pHobbies.some(ph => mh.toLowerCase() === ph.toLowerCase()));
-      const sameAgeRange = myAgeRange === p.ageRange;
-      
-      const theyWantMentor = pGoals.some(g => normalizeGoal(g).includes('mentor') && !normalizeGoal(g).includes('mentee'));
-      const theyWantMentee = pGoals.some(g => normalizeGoal(g).includes('mentee'));
-      
-      // Mentor/Mentee matching: complementary goals in same profession
-      if (iWantMentor && theyWantMentee && hasCommonProfession) return true;
-      if (iWantMentee && theyWantMentor && hasCommonProfession) return true;
-      
-      // Professional Networking: common profession OR common interests
-      if (iWantNetworking && (hasCommonProfession || hasCommonInterests)) return true;
-      
-      // Friendship/Social: same age range AND (common interests OR common hobbies)
-      if (iWantFriendship && sameAgeRange && (hasCommonInterests || hasCommonHobbies)) return true;
-      
-      // Activity Partner: common hobbies
-      if (iWantActivityPartner && hasCommonHobbies) return true;
-      
-      return false;
-    });
+
+    return allProfiles
+      .map(p => ({ profile: p, score: computeMatchScore(myProfile, p) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.profile);
   }
 
   async createNotification(userId: string, content: string): Promise<any> {
@@ -395,6 +418,48 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(customOptions).orderBy(customOptions.category, customOptions.originalValue);
   }
 
+  async getAdminCustomOptions(): Promise<(CustomOption & { createdByAlias: string | null })[]> {
+    const rows = await db
+      .select({
+        id: customOptions.id,
+        category: customOptions.category,
+        originalValue: customOptions.originalValue,
+        labelEn: customOptions.labelEn,
+        labelJa: customOptions.labelJa,
+        createdBy: customOptions.createdBy,
+        createdAt: customOptions.createdAt,
+        createdByAlias: profiles.alias,
+      })
+      .from(customOptions)
+      .leftJoin(profiles, eq(profiles.userId, customOptions.createdBy))
+      .orderBy(customOptions.category, customOptions.originalValue);
+    return rows;
+  }
+
+  async mergeCustomOption(id: number, targetKey: string): Promise<void> {
+    const [opt] = await db.select().from(customOptions).where(eq(customOptions.id, id));
+    if (!opt) return;
+    const oldKey = opt.originalValue;
+    const cat = opt.category;
+    // Replace oldKey with targetKey in all profiles for the relevant category column.
+    // array_replace(arr, old, new) is safe with parameterised values; the ANY check
+    // uses a cast so Postgres won't complain about type mismatch with text[].
+    if (cat === "profession") {
+      await db.execute(
+        sql`UPDATE profiles SET profession = array_replace(profession, ${oldKey}::text, ${targetKey}::text) WHERE ${oldKey}::text = ANY(profession)`
+      );
+    } else if (cat === "interests") {
+      await db.execute(
+        sql`UPDATE profiles SET interests = array_replace(interests, ${oldKey}::text, ${targetKey}::text) WHERE ${oldKey}::text = ANY(interests)`
+      );
+    } else if (cat === "hobbies") {
+      await db.execute(
+        sql`UPDATE profiles SET hobbies = array_replace(hobbies, ${oldKey}::text, ${targetKey}::text) WHERE ${oldKey}::text = ANY(hobbies)`
+      );
+    }
+    await db.delete(customOptions).where(eq(customOptions.id, id));
+  }
+
   async getCustomOptionsByCategory(category: string): Promise<CustomOption[]> {
     return await db.select().from(customOptions).where(eq(customOptions.category, category as any));
   }
@@ -406,6 +471,20 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCustomOption(id: number): Promise<void> {
     await db.delete(customOptions).where(eq(customOptions.id, id));
+  }
+
+  async createOrGetCustomOption(category: OptionCategory, key: string, labelEn: string, labelJa: string, userId: string): Promise<CustomOption> {
+    const [existing] = await db.select().from(customOptions)
+      .where(and(eq(customOptions.category, category), eq(customOptions.originalValue, key)));
+    if (existing) return existing;
+    const [created] = await db.insert(customOptions).values({
+      category,
+      originalValue: key,
+      labelEn,
+      labelJa,
+      createdBy: userId,
+    }).returning();
+    return created;
   }
 
   async registerCustomValues(category: OptionCategory, values: string[], userId: string): Promise<void> {
@@ -423,6 +502,27 @@ export class DatabaseStorage implements IStorage {
         createdBy: userId,
       });
     }
+  }
+
+  async getBoardResources(): Promise<BoardResource[]> {
+    return await db.select().from(boardResources).orderBy(boardResources.sortOrder, boardResources.createdAt);
+  }
+
+  async createBoardResource(resource: InsertBoardResource): Promise<BoardResource> {
+    const [created] = await db.insert(boardResources).values(resource).returning();
+    return created;
+  }
+
+  async updateBoardResource(id: number, resource: Partial<InsertBoardResource>): Promise<BoardResource | undefined> {
+    const [updated] = await db.update(boardResources)
+      .set({ ...resource, updatedAt: new Date() })
+      .where(eq(boardResources.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBoardResource(id: number): Promise<void> {
+    await db.delete(boardResources).where(eq(boardResources.id, id));
   }
 }
 

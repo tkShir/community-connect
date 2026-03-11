@@ -353,3 +353,89 @@ export function setupAuth0(app: Express) {
 
   console.log("[auth0] routes registered (stateless signed-cookie sessions)");
 }
+
+// ── Auth0 Management API helpers ──────────────────────────────────────────────
+
+/** Cache management token to avoid re-fetching on every request */
+let mgmtTokenCache: { token: string; expiresAt: number } | null = null;
+
+async function getManagementToken(): Promise<string> {
+  const issuerBaseURL = process.env.AUTH0_ISSUER_BASE_URL?.replace(/\/+$/, "");
+  const clientID = process.env.AUTH0_M2M_CLIENT_ID || process.env.AUTH0_CLIENT_ID;
+  const clientSecret = process.env.AUTH0_M2M_CLIENT_SECRET || process.env.AUTH0_CLIENT_SECRET;
+
+  if (!issuerBaseURL || !clientID || !clientSecret) {
+    throw new Error("Auth0 credentials not configured");
+  }
+
+  // Return cached token if still valid (with 60s buffer)
+  if (mgmtTokenCache && mgmtTokenCache.expiresAt > Date.now() + 60_000) {
+    return mgmtTokenCache.token;
+  }
+
+  const audience = `${issuerBaseURL}/api/v2/`;
+  const tokenRes = await fetchJSON(`${issuerBaseURL}/oauth/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      grant_type: "client_credentials",
+      client_id: clientID,
+      client_secret: clientSecret,
+      audience,
+    }).toString(),
+    timeoutMs: 10_000,
+  });
+
+  if (tokenRes.error || !tokenRes.access_token) {
+    throw new Error(`Failed to get management token: ${tokenRes.error} — ${tokenRes.error_description ?? ""}`);
+  }
+
+  const expiresInMs = (tokenRes.expires_in ?? 86400) * 1000;
+  mgmtTokenCache = { token: tokenRes.access_token, expiresAt: Date.now() + expiresInMs };
+  return tokenRes.access_token;
+}
+
+export interface CreateAuth0UserInput {
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+export async function createAuth0User(input: CreateAuth0UserInput): Promise<{ id: string; email: string }> {
+  const issuerBaseURL = process.env.AUTH0_ISSUER_BASE_URL?.replace(/\/+$/, "");
+  if (!issuerBaseURL) throw new Error("AUTH0_ISSUER_BASE_URL not configured");
+
+  const token = await getManagementToken();
+
+  const body: Record<string, unknown> = {
+    email: input.email,
+    password: input.password,
+    connection: "Username-Password-Authentication",
+    email_verified: true,
+  };
+  if (input.firstName || input.lastName) {
+    body.given_name = input.firstName ?? "";
+    body.family_name = input.lastName ?? "";
+    body.name = [input.firstName, input.lastName].filter(Boolean).join(" ");
+  }
+
+  const result = await fetchJSON(`${issuerBaseURL}/api/v2/users`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+    timeoutMs: 15_000,
+  });
+
+  if (result.error || result.statusCode >= 400) {
+    const err = new Error(result.message ?? result.error ?? "Failed to create user in Auth0") as Error & { statusCode?: number };
+    // Auth0 returns 409 for duplicate users
+    err.statusCode = result.statusCode === 409 || result.message?.includes("already exists") ? 409 : 500;
+    throw err;
+  }
+
+  return { id: result.user_id, email: result.email };
+}

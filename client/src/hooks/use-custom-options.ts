@@ -5,6 +5,18 @@ import { setCustomOptionsCache } from "@/lib/profile-options";
 
 const QUERY_KEY = ["/api/custom-options"];
 
+export function useCreateCustomOption() {
+  return useMutation({
+    mutationFn: async (data: { category: string; labelJa: string; labelEn: string }): Promise<CustomOption> => {
+      const response = await apiRequest("POST", "/api/custom-options", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+
 export function useCustomOptions() {
   return useQuery<CustomOption[]>({
     queryKey: QUERY_KEY,
@@ -16,8 +28,10 @@ export function useCustomOptions() {
   });
 }
 
+export type CustomOptionWithCreator = CustomOption & { createdByAlias: string | null };
+
 export function useAdminCustomOptions() {
-  return useQuery<CustomOption[]>({
+  return useQuery<CustomOptionWithCreator[]>({
     queryKey: ["/api/admin/custom-options"],
   });
 }
@@ -39,6 +53,19 @@ export function useDeleteCustomOption() {
   return useMutation({
     mutationFn: async (id: number) => {
       const response = await apiRequest("DELETE", `/api/admin/custom-options/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/custom-options"] });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    },
+  });
+}
+
+export function useMergeCustomOption() {
+  return useMutation({
+    mutationFn: async ({ id, targetKey }: { id: number; targetKey: string }) => {
+      const response = await apiRequest("POST", `/api/admin/custom-options/${id}/merge`, { targetKey });
       return response.json();
     },
     onSuccess: () => {

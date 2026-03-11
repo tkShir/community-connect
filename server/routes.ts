@@ -6,7 +6,7 @@ import { z } from "zod";
 import { db } from "./db";
 import { users } from "@shared/models/auth";
 import { profiles } from "@shared/schema";
-import { isAuthenticated, getSessionUserId } from "./auth0";
+import { isAuthenticated, getSessionUserId, createAuth0User } from "./auth0";
 
 function isAuthed(req: Request): boolean {
   return isAuthenticated(req);
@@ -144,10 +144,10 @@ export async function registerRoutes(
         receiverId,
       });
 
-      // Notification for receiver
-      const receiverProfile = await storage.getProfile(receiverId);
-      if (receiverProfile) {
-        await storage.createNotification(receiverProfile.userId, `${myProfile.alias} sent you a connection request!`);
+      // Notify all admins to review the connection request
+      const adminUserIds = await storage.getAdminUserIds();
+      for (const adminUserId of adminUserIds) {
+        await storage.createNotification(adminUserId, `${myProfile.alias} がつながり申請を送りました。管理画面で確認してください。`);
       }
 
       res.status(201).json(match);
@@ -223,8 +223,87 @@ export async function registerRoutes(
     }
   });
 
+  // POST /api/custom-options — authenticated users can create a new custom option
+  app.post("/api/custom-options", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = req.user!.id;
+    const { category, labelJa, labelEn } = req.body;
+    if (!category || !labelJa || !labelEn) {
+      return res.status(400).json({ message: "category, labelJa, and labelEn are required" });
+    }
+    if (!["profession", "interests", "hobbies"].includes(category)) {
+      return res.status(400).json({ message: "Invalid category" });
+    }
+    try {
+      // Generate a stable key from the English label
+      const baseKey = labelEn.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
+      const key = `custom_${baseKey}`;
+      // Upsert: if key already exists in this category, return existing
+      const option = await storage.createOrGetCustomOption(category as any, key, labelEn, labelJa, userId);
+      res.json(option);
+    } catch (err) {
+      console.error("Failed to create custom option:", err);
+      res.status(500).json({ message: "Failed to create custom option" });
+    }
+  });
+
   // === Admin Routes ===
-  
+
+  // Admin: Get pending connection requests (awaiting_admin)
+  app.get("/api/admin/matches/pending", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    const pending = await storage.getPendingAdminMatches();
+    res.json(pending);
+  });
+
+  // Admin: Approve connection request → set status to "pending" so receiver sees it
+  app.post("/api/admin/matches/:id/approve", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+    const matchId = Number(req.params.id);
+    const match = await storage.getMatch(matchId);
+    if (!match) return res.status(404).json({ message: "Match not found" });
+
+    const updated = await storage.updateMatchStatus(matchId, "pending");
+
+    // Notify receiver that a connection request is waiting
+    const receiverProfile = await storage.getProfile(match.receiverId);
+    const initiatorProfile = await storage.getProfile(match.initiatorId);
+    if (receiverProfile && initiatorProfile) {
+      await storage.createNotification(receiverProfile.userId, `${initiatorProfile.alias} からつながり申請が届いています！`);
+    }
+
+    res.json(updated);
+  });
+
+  // Admin: Reject connection request
+  app.post("/api/admin/matches/:id/reject", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+
+    const matchId = Number(req.params.id);
+    const match = await storage.getMatch(matchId);
+    if (!match) return res.status(404).json({ message: "Match not found" });
+
+    const updated = await storage.updateMatchStatus(matchId, "rejected");
+
+    // Notify initiator that the request was not approved
+    const initiatorProfile = await storage.getProfile(match.initiatorId);
+    if (initiatorProfile) {
+      await storage.createNotification(initiatorProfile.userId, "つながり申請が管理者により却下されました。");
+    }
+
+    res.json(updated);
+  });
+
   app.get("/api/admin/profiles", async (req, res) => {
     if (!isAuthed(req)) return res.sendStatus(401);
     const userId = getUserId(req);
@@ -260,6 +339,55 @@ export async function registerRoutes(
         res.status(500).json({ message: "Internal server error" });
       }
     }
+  });
+
+  // === Board Resources Routes (admin only) ===
+
+  app.get("/api/admin/board-resources", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    const resources = await storage.getBoardResources();
+    res.json(resources);
+  });
+
+  app.post("/api/admin/board-resources", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const { title, url, description, category, sortOrder } = req.body;
+      if (!title || !url) return res.status(400).json({ message: "title and url are required" });
+      const resource = await storage.createBoardResource({ title, url, description: description || null, category: category || "other", sortOrder: sortOrder ?? 0 });
+      res.status(201).json(resource);
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/board-resources/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    try {
+      const updated = await storage.updateBoardResource(Number(req.params.id), req.body);
+      if (!updated) return res.status(404).json({ message: "Resource not found" });
+      res.json(updated);
+    } catch {
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.delete("/api/admin/board-resources/:id", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) return res.status(403).json({ message: "Admin access required" });
+    await storage.deleteBoardResource(Number(req.params.id));
+    res.json({ success: true });
   });
 
   // === Events Routes ===
@@ -632,11 +760,32 @@ export async function registerRoutes(
       return res.status(403).json({ message: "Admin access required" });
     }
     try {
-      const options = await storage.getCustomOptions();
+      const options = await storage.getAdminCustomOptions();
       res.json(options);
     } catch (err) {
       console.warn("Failed to fetch admin custom options (table may not exist yet):", err);
       res.json([]);
+    }
+  });
+
+  app.post("/api/admin/custom-options/:id/merge", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    try {
+      const optionId = Number(req.params.id);
+      const { targetKey } = req.body;
+      if (!targetKey || typeof targetKey !== "string") {
+        return res.status(400).json({ message: "targetKey is required" });
+      }
+      await storage.mergeCustomOption(optionId, targetKey);
+      res.json({ success: true });
+    } catch (err) {
+      console.error("Failed to merge custom option:", err);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 
@@ -675,6 +824,29 @@ export async function registerRoutes(
       res.json({ success: true });
     } catch (err) {
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // === Admin: Create Auth0 User ===
+
+  app.post("/api/admin/users", async (req, res) => {
+    if (!isAuthed(req)) return res.sendStatus(401);
+    const userId = getUserId(req);
+    const myProfile = await storage.getProfileByUserId(userId);
+    if (!myProfile || !myProfile.isAdmin) {
+      return res.status(403).json({ message: "Admin access required" });
+    }
+    const { email, password, firstName, lastName } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+    try {
+      const created = await createAuth0User({ email, password, firstName, lastName });
+      res.status(201).json(created);
+    } catch (err: any) {
+      console.error("[admin] createAuth0User failed:", err.message);
+      const status = err.statusCode === 409 ? 409 : 500;
+      res.status(status).json({ message: err.message ?? "Failed to create user" });
     }
   });
 

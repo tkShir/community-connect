@@ -12,25 +12,45 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle } from "lucide-react";
+import { Shield, User, Edit, Search, X, Calendar, Check, XCircle, Plus, Clock, MapPin, Trash2, Users, UsersRound, ExternalLink, Link as LinkIcon, Languages, Save, MessageSquare, Mail, UserCircle, UserPlus, Bookmark, FileText, FolderOpen, Maximize2, Minimize2, GitMerge } from "lucide-react";
 import { useState } from "react";
 import { useAdminEvents, usePendingEvents, useApproveEvent, useDenyEvent, useDeleteEvent, useCreateEvent, useUpdateEvent } from "@/hooks/use-events";
 import { useAdminGroups, usePendingGroups, useApproveGroup, useDenyGroup, useDeleteGroup, useCreateGroup, useUpdateGroup } from "@/hooks/use-groups";
-import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption } from "@/hooks/use-custom-options";
+import { useAdminCustomOptions, useUpdateCustomOption, useDeleteCustomOption, useMergeCustomOption, type CustomOptionWithCreator } from "@/hooks/use-custom-options";
 import { useAdminFeedback, useDeleteFeedback } from "@/hooks/use-feedback";
-import type { Group, CustomOption, Feedback } from "@shared/schema";
+import type { Group, CustomOption, Feedback, BoardResource } from "@shared/schema";
 import { t } from "@/lib/i18n";
 import { useLocale } from "@/hooks/use-locale";
-import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey } from "@/lib/profile-options";
+import { translateOptionKey, translateOptionKeys, buildOptions, AGE_RANGE_KEYS, CONTACT_METHOD_KEYS, migrateToKey, PROFESSION_KEYS, INTEREST_KEYS, HOBBY_KEYS } from "@/lib/profile-options";
 
 export default function Admin() {
   useLocale();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [editingProfile, setEditingProfile] = useState<Profile | null>(null);
+  const [createUserOpen, setCreateUserOpen] = useState(false);
 
   const { data: profiles, isLoading, error } = useQuery<Profile[]>({
     queryKey: ["/api/admin/profiles"],
+  });
+
+  const createUserMutation = useMutation({
+    mutationFn: async (input: { email: string; password: string; firstName?: string; lastName?: string }) => {
+      const res = await apiRequest("POST", "/api/admin/users", input);
+      if (!res.ok) {
+        const err = await res.json();
+        if (res.status === 409) throw new Error(t("admin.create_user_already_exists"));
+        throw new Error(err.message ?? t("admin.create_user_failed"));
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setCreateUserOpen(false);
+      toast({ title: t("admin.create_user_success") });
+    },
+    onError: (err: Error) => {
+      toast({ title: err.message || t("admin.create_user_failed"), variant: "destructive" });
+    },
   });
 
   const updateMutation = useMutation({
@@ -93,10 +113,18 @@ export default function Admin() {
       </header>
 
       <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 max-w-[900px]">
+        <TabsList className="grid w-full grid-cols-7 max-w-[1300px]">
+          <TabsTrigger value="board" data-testid="tab-admin-board">
+            <Shield className="w-4 h-4 mr-2" />
+            {t("admin.board_tab")}
+          </TabsTrigger>
           <TabsTrigger value="users" data-testid="tab-admin-users">
             <Users className="w-4 h-4 mr-2" />
             {t("admin.users_count", { count: profiles?.length || 0 })}
+          </TabsTrigger>
+          <TabsTrigger value="connections" data-testid="tab-admin-connections">
+            <UserPlus className="w-4 h-4 mr-2" />
+            {t("admin.connections_approval")}
           </TabsTrigger>
           <TabsTrigger value="events" data-testid="tab-admin-events">
             <Calendar className="w-4 h-4 mr-2" />
@@ -116,26 +144,50 @@ export default function Admin() {
           </TabsTrigger>
         </TabsList>
 
+        <TabsContent value="board" className="mt-6">
+          <BoardManagement />
+        </TabsContent>
+
         <TabsContent value="users" className="mt-6 space-y-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder={t("admin.search_placeholder")}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-card border-white/10"
-              data-testid="input-admin-search"
-            />
-            {searchTerm && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2"
-                onClick={() => setSearchTerm("")}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            )}
+          <div className="flex gap-3 items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <Input
+                placeholder={t("admin.search_placeholder")}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-card border-white/10"
+                data-testid="input-admin-search"
+              />
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2"
+                  onClick={() => setSearchTerm("")}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-create-user">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {t("admin.create_user")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-white/10">
+                <DialogHeader>
+                  <DialogTitle>{t("admin.create_new_user")}</DialogTitle>
+                  <DialogDescription>{t("admin.create_user_description")}</DialogDescription>
+                </DialogHeader>
+                <CreateUserForm
+                  onSubmit={(data) => createUserMutation.mutate(data)}
+                  isPending={createUserMutation.isPending}
+                />
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid gap-4">
@@ -198,6 +250,10 @@ export default function Admin() {
           </div>
         </TabsContent>
 
+        <TabsContent value="connections" className="mt-6">
+          <ConnectionsApproval />
+        </TabsContent>
+
         <TabsContent value="events" className="mt-6">
           <EventsManagement />
         </TabsContent>
@@ -214,6 +270,470 @@ export default function Admin() {
           <CustomOptionsManagement />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+// ── helpers ──────────────────────────────────────────────────────────────────
+
+function isGoogleDocsUrl(url: string): boolean {
+  return /docs\.google\.com\/(document|spreadsheets|presentation|forms)/.test(url);
+}
+
+function toEmbedUrl(url: string): string {
+  // Convert edit URL to embedded URL
+  return url.replace(/\/edit(\?.*)?$/, "/edit?usp=sharing&embedded=true")
+            .replace(/\/view(\?.*)?$/, "/preview");
+}
+
+const BOARD_CATEGORIES = [
+  { value: "minutes", labelKey: "admin.board_cat_minutes" },
+  { value: "drive", labelKey: "admin.board_cat_drive" },
+  { value: "other", labelKey: "admin.board_cat_other" },
+] as const;
+
+function categoryIcon(category: string) {
+  switch (category) {
+    case "minutes": return <FileText className="w-4 h-4" />;
+    case "drive": return <FolderOpen className="w-4 h-4" />;
+    default: return <Bookmark className="w-4 h-4" />;
+  }
+}
+
+// ── BoardManagement ───────────────────────────────────────────────────────────
+
+function BoardManagement() {
+  useLocale();
+  const { toast } = useToast();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editingResource, setEditingResource] = useState<BoardResource | null>(null);
+  const [embeddedId, setEmbeddedId] = useState<number | null>(null);
+  const [form, setForm] = useState({ title: "", url: "", description: "", category: "other" });
+
+  const { data: resources, isLoading } = useQuery<BoardResource[]>({
+    queryKey: ["/api/admin/board-resources"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await apiRequest("POST", "/api/admin/board-resources", data);
+      if (!res.ok) throw new Error("Failed to create");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/board-resources"] });
+      setAddDialogOpen(false);
+      setForm({ title: "", url: "", description: "", category: "other" });
+      toast({ title: t("admin.board_resource_created") });
+    },
+    onError: () => toast({ title: t("admin.board_resource_create_failed"), variant: "destructive" }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: Partial<BoardResource> }) => {
+      const res = await apiRequest("PATCH", `/api/admin/board-resources/${id}`, data);
+      if (!res.ok) throw new Error("Failed to update");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/board-resources"] });
+      setEditingResource(null);
+      toast({ title: t("admin.board_resource_updated") });
+    },
+    onError: () => toast({ title: t("admin.board_resource_update_failed"), variant: "destructive" }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/board-resources/${id}`, {});
+      if (!res.ok) throw new Error("Failed to delete");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/board-resources"] });
+      toast({ title: t("admin.board_resource_deleted") });
+    },
+    onError: () => toast({ title: t("admin.board_resource_delete_failed"), variant: "destructive" }),
+  });
+
+  if (isLoading) return <Skeleton className="h-40 w-full rounded-xl" />;
+
+  const embeddedResource = embeddedId != null ? resources?.find(r => r.id === embeddedId) : null;
+
+  // Group by category
+  const grouped: Record<string, BoardResource[]> = {};
+  for (const r of resources || []) {
+    if (!grouped[r.category]) grouped[r.category] = [];
+    grouped[r.category].push(r);
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-xl font-semibold">{t("admin.board_title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("admin.board_description")}</p>
+        </div>
+        <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+          <DialogTrigger asChild>
+            <Button data-testid="button-add-board-resource">
+              <Plus className="w-4 h-4 mr-2" />
+              {t("admin.board_add_resource")}
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="bg-card border-white/10 sm:max-w-[480px]">
+            <DialogHeader>
+              <DialogTitle>{t("admin.board_add_resource")}</DialogTitle>
+              <DialogDescription>{t("admin.board_add_description")}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_title")}</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder={t("admin.board_resource_title_placeholder")}
+                  className="bg-background border-white/10"
+                  data-testid="input-board-title"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_url")}</Label>
+                <Input
+                  value={form.url}
+                  onChange={(e) => setForm({ ...form, url: e.target.value })}
+                  placeholder="https://docs.google.com/..."
+                  className="bg-background border-white/10"
+                  data-testid="input-board-url"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_category")}</Label>
+                <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                  <SelectTrigger className="bg-background border-white/10" data-testid="select-board-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BOARD_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.board_resource_description")}</Label>
+                <Input
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  placeholder={t("admin.board_resource_description_placeholder")}
+                  className="bg-background border-white/10"
+                  data-testid="input-board-description"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  onClick={() => createMutation.mutate(form)}
+                  disabled={!form.title || !form.url || createMutation.isPending}
+                  data-testid="button-submit-board-resource"
+                >
+                  {createMutation.isPending ? t("admin.saving") : t("admin.board_add_resource")}
+                </Button>
+              </DialogFooter>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Embedded Google Docs viewer */}
+      {embeddedResource && (
+        <Card className="bg-card border-primary/20">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                {embeddedResource.title}
+              </CardTitle>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" asChild>
+                  <a href={embeddedResource.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="w-3 h-3 mr-1" />
+                    {t("admin.board_open_external")}
+                  </a>
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEmbeddedId(null)}>
+                  <Minimize2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <iframe
+              src={toEmbedUrl(embeddedResource.url)}
+              className="w-full rounded-b-xl border-0"
+              style={{ height: "70vh" }}
+              allow="autoplay"
+              title={embeddedResource.title}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Resource list */}
+      {!resources || resources.length === 0 ? (
+        <Card className="bg-card/30 border-white/5">
+          <CardContent className="p-10 text-center text-muted-foreground">
+            <Bookmark className="w-10 h-10 mx-auto mb-3 opacity-30" />
+            {t("admin.board_no_resources")}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {BOARD_CATEGORIES.map(({ value, labelKey }) => {
+            const items = grouped[value] || [];
+            if (items.length === 0) return null;
+            return (
+              <div key={value} className="space-y-3">
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  {categoryIcon(value)}
+                  {t(labelKey)}
+                </h3>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map((resource) => (
+                    <Card
+                      key={resource.id}
+                      className={`bg-card border-white/10 transition-colors hover:border-primary/30 ${embeddedId === resource.id ? "border-primary/50" : ""}`}
+                      data-testid={`card-board-resource-${resource.id}`}
+                    >
+                      <CardContent className="p-4 flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{resource.title}</p>
+                            {resource.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{resource.description}</p>
+                            )}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Dialog open={editingResource?.id === resource.id} onOpenChange={(open) => !open && setEditingResource(null)}>
+                              <DialogTrigger asChild>
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditingResource({ ...resource })} data-testid={`button-edit-board-${resource.id}`}>
+                                  <Edit className="w-3 h-3" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="bg-card border-white/10 sm:max-w-[480px]">
+                                <DialogHeader>
+                                  <DialogTitle>{t("admin.board_edit_resource")}</DialogTitle>
+                                </DialogHeader>
+                                {editingResource && (
+                                  <div className="space-y-4">
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_title")}</Label>
+                                      <Input
+                                        value={editingResource.title}
+                                        onChange={(e) => setEditingResource({ ...editingResource, title: e.target.value })}
+                                        className="bg-background border-white/10"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_url")}</Label>
+                                      <Input
+                                        value={editingResource.url}
+                                        onChange={(e) => setEditingResource({ ...editingResource, url: e.target.value })}
+                                        className="bg-background border-white/10"
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_category")}</Label>
+                                      <Select value={editingResource.category} onValueChange={(v) => setEditingResource({ ...editingResource, category: v })}>
+                                        <SelectTrigger className="bg-background border-white/10">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {BOARD_CATEGORIES.map((c) => (
+                                            <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label>{t("admin.board_resource_description")}</Label>
+                                      <Input
+                                        value={editingResource.description ?? ""}
+                                        onChange={(e) => setEditingResource({ ...editingResource, description: e.target.value })}
+                                        className="bg-background border-white/10"
+                                      />
+                                    </div>
+                                    <DialogFooter>
+                                      <Button variant="outline" onClick={() => setEditingResource(null)}>{t("admin.cancel")}</Button>
+                                      <Button
+                                        onClick={() => updateMutation.mutate({ id: editingResource.id, data: { title: editingResource.title, url: editingResource.url, description: editingResource.description, category: editingResource.category } })}
+                                        disabled={updateMutation.isPending}
+                                        data-testid="button-save-board-resource"
+                                      >
+                                        {updateMutation.isPending ? t("admin.saving") : t("admin.save_changes")}
+                                      </Button>
+                                    </DialogFooter>
+                                  </div>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => deleteMutation.mutate(resource.id)}
+                              disabled={deleteMutation.isPending}
+                              data-testid={`button-delete-board-${resource.id}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline" className="flex-1 text-xs h-8" asChild>
+                            <a href={resource.url} target="_blank" rel="noopener noreferrer" data-testid={`button-open-board-${resource.id}`}>
+                              <ExternalLink className="w-3 h-3 mr-1" />
+                              {t("admin.board_open")}
+                            </a>
+                          </Button>
+                          {isGoogleDocsUrl(resource.url) && (
+                            <Button
+                              size="sm"
+                              variant={embeddedId === resource.id ? "default" : "secondary"}
+                              className="flex-1 text-xs h-8"
+                              onClick={() => setEmbeddedId(embeddedId === resource.id ? null : resource.id)}
+                              data-testid={`button-embed-board-${resource.id}`}
+                            >
+                              {embeddedId === resource.id
+                                ? <><Minimize2 className="w-3 h-3 mr-1" />{t("admin.board_close_embed")}</>
+                                : <><Maximize2 className="w-3 h-3 mr-1" />{t("admin.board_embed")}</>
+                              }
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          {/* uncategorized "other" already covered above; extra safety for unknown categories */}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConnectionsApproval() {
+  useLocale();
+  const { toast } = useToast();
+
+  const { data: pendingMatches, isLoading } = useQuery<any[]>({
+    queryKey: ["/api/admin/matches/pending"],
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/matches/${id}/approve`, {});
+      if (!res.ok) throw new Error("Failed to approve");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches/pending"] });
+      toast({ title: t("admin.connection_approved") });
+    },
+    onError: () => toast({ title: t("admin.connection_approve_failed"), variant: "destructive" }),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest("POST", `/api/admin/matches/${id}/reject`, {});
+      if (!res.ok) throw new Error("Failed to reject");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/matches/pending"] });
+      toast({ title: t("admin.connection_rejected") });
+    },
+    onError: () => toast({ title: t("admin.connection_reject_failed"), variant: "destructive" }),
+  });
+
+  if (isLoading) return <Skeleton className="h-32 w-full rounded-xl" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <h2 className="text-lg font-semibold">{t("admin.connections_approval_title")}</h2>
+        <Badge variant="secondary">{t("admin.pending_approval_count", { count: pendingMatches?.length || 0 })}</Badge>
+      </div>
+      {!pendingMatches || pendingMatches.length === 0 ? (
+        <Card className="bg-card/30 border-white/5">
+          <CardContent className="p-8 text-center text-muted-foreground">
+            {t("admin.no_pending_connections")}
+          </CardContent>
+        </Card>
+      ) : (
+        pendingMatches.map((match: any) => (
+          <Card key={match.id} className="bg-card border-primary/10">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <div className="text-center">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold mx-auto mb-1">
+                      {match.initiatorProfile?.alias?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <p className="text-sm font-medium">{match.initiatorProfile?.alias}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {Array.isArray(match.initiatorProfile?.profession)
+                        ? match.initiatorProfile.profession.slice(0, 1).join(", ")
+                        : match.initiatorProfile?.profession}
+                    </p>
+                  </div>
+                  <div className="text-muted-foreground text-sm">{t("admin.connection_request_arrow")}</div>
+                  <div className="text-center">
+                    <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center text-muted-foreground font-bold mx-auto mb-1">
+                      {match.receiverProfile?.alias?.substring(0, 2).toUpperCase()}
+                    </div>
+                    <p className="text-sm font-medium">{match.receiverProfile?.alias}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {Array.isArray(match.receiverProfile?.profession)
+                        ? match.receiverProfile.profession.slice(0, 1).join(", ")
+                        : match.receiverProfile?.profession}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => approveMutation.mutate(match.id)}
+                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                    data-testid={`button-approve-connection-${match.id}`}
+                  >
+                    <Check className="w-4 h-4 mr-1" />
+                    {t("admin.approve")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => rejectMutation.mutate(match.id)}
+                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                    className="text-muted-foreground hover:text-destructive"
+                    data-testid={`button-reject-connection-${match.id}`}
+                  >
+                    <XCircle className="w-4 h-4 mr-1" />
+                    {t("admin.deny")}
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {new Date(match.createdAt).toLocaleDateString()}
+              </p>
+            </CardContent>
+          </Card>
+        ))
+      )}
     </div>
   );
 }
@@ -334,6 +854,89 @@ function EditProfileForm({
         data-testid="button-save-profile"
       >
         {isPending ? t("admin.saving") : t("admin.save_changes")}
+      </Button>
+    </form>
+  );
+}
+
+function CreateUserForm({
+  onSubmit,
+  isPending,
+}: {
+  onSubmit: (data: { email: string; password: string; firstName?: string; lastName?: string }) => void;
+  isPending: boolean;
+}) {
+  useLocale();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit({ email, password, firstName: firstName || undefined, lastName: lastName || undefined });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="firstName">{t("admin.first_name")}</Label>
+          <Input
+            id="firstName"
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            className="bg-background border-white/10"
+            placeholder={t("admin.first_name_placeholder")}
+            data-testid="input-create-first-name"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="lastName">{t("admin.last_name")}</Label>
+          <Input
+            id="lastName"
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            className="bg-background border-white/10"
+            placeholder={t("admin.last_name_placeholder")}
+            data-testid="input-create-last-name"
+          />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="email">{t("admin.email")}</Label>
+        <Input
+          id="email"
+          type="email"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="bg-background border-white/10"
+          placeholder="user@example.com"
+          data-testid="input-create-email"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="password">{t("admin.password")}</Label>
+        <Input
+          id="password"
+          type="password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="bg-background border-white/10"
+          placeholder={t("admin.password_placeholder")}
+          data-testid="input-create-password"
+        />
+        <p className="text-xs text-muted-foreground">{t("admin.password_requirements")}</p>
+      </div>
+      <Button
+        type="submit"
+        className="w-full bg-primary hover:bg-primary/90"
+        disabled={isPending}
+        data-testid="button-submit-create-user"
+      >
+        {isPending ? t("admin.creating") : t("admin.create_account")}
       </Button>
     </form>
   );
@@ -1179,10 +1782,13 @@ function CustomOptionsManagement() {
   const { data: customOptions, isLoading } = useAdminCustomOptions();
   const { mutate: updateOption, isPending: isUpdating } = useUpdateCustomOption();
   const { mutate: deleteOption, isPending: isDeleting } = useDeleteCustomOption();
+  const { mutate: mergeOption, isPending: isMerging } = useMergeCustomOption();
 
   const [edits, setEdits] = useState<Record<number, { labelEn: string; labelJa: string }>>({});
+  const [mergeTarget, setMergeTarget] = useState<CustomOptionWithCreator | null>(null);
+  const [mergeTargetKey, setMergeTargetKey] = useState("");
 
-  const startEdit = (opt: CustomOption) => {
+  const startEdit = (opt: CustomOptionWithCreator) => {
     setEdits((prev) => ({ ...prev, [opt.id]: { labelEn: opt.labelEn, labelJa: opt.labelJa } }));
   };
 
@@ -1216,6 +1822,21 @@ function CustomOptionsManagement() {
     });
   };
 
+  const handleMerge = () => {
+    if (!mergeTarget || !mergeTargetKey) return;
+    mergeOption(
+      { id: mergeTarget.id, targetKey: mergeTargetKey },
+      {
+        onSuccess: () => {
+          toast({ title: t("admin.custom_option_merged") });
+          setMergeTarget(null);
+          setMergeTargetKey("");
+        },
+        onError: () => toast({ title: t("admin.custom_option_merge_failed"), variant: "destructive" }),
+      }
+    );
+  };
+
   const categoryLabel = (cat: string) => {
     switch (cat) {
       case "profession": return t("admin.category_profession");
@@ -1223,6 +1844,18 @@ function CustomOptionsManagement() {
       case "hobbies": return t("admin.category_hobbies");
       default: return cat;
     }
+  };
+
+  // Build merge target options for a given category: predefined keys + other custom options
+  const getMergeOptions = (cat: string, excludeId: number) => {
+    const predefined = buildOptions(
+      cat === "profession" ? PROFESSION_KEYS :
+      cat === "interests" ? INTEREST_KEYS : HOBBY_KEYS
+    );
+    const otherCustom = (customOptions || [])
+      .filter((o) => o.category === cat && o.id !== excludeId)
+      .map((o) => ({ key: o.originalValue, label: `${o.labelJa} / ${o.labelEn} [カスタム]` }));
+    return [...predefined, ...otherCustom];
   };
 
   if (isLoading) {
@@ -1235,7 +1868,7 @@ function CustomOptionsManagement() {
     );
   }
 
-  const grouped: Record<string, CustomOption[]> = {};
+  const grouped: Record<string, CustomOptionWithCreator[]> = {};
   for (const opt of customOptions || []) {
     if (!grouped[opt.category]) grouped[opt.category] = [];
     grouped[opt.category].push(opt);
@@ -1267,22 +1900,46 @@ function CustomOptionsManagement() {
                     <Card key={opt.id} className="bg-card border-white/10" data-testid={`card-custom-option-${opt.id}`}>
                       <CardContent className="p-4">
                         <div className="flex flex-col gap-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <span className="font-mono text-sm text-muted-foreground">{t("admin.key")}:</span>{" "}
-                              <span className="font-semibold">{opt.originalValue}</span>
+                          {/* Header row: key + creator + actions */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <div>
+                                <span className="font-mono text-sm text-muted-foreground">{t("admin.key")}:</span>{" "}
+                                <span className="font-semibold">{opt.originalValue}</span>
+                              </div>
+                              {opt.createdByAlias && (
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <UserCircle className="w-3 h-3" />
+                                  <span>{t("admin.created_by")}: {opt.createdByAlias}</span>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 shrink-0">
                               {!editing && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => startEdit(opt)}
-                                  data-testid={`button-edit-option-${opt.id}`}
-                                >
-                                  <Edit className="w-4 h-4 mr-1" />
-                                  {t("admin.edit")}
-                                </Button>
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => startEdit(opt)}
+                                    data-testid={`button-edit-option-${opt.id}`}
+                                  >
+                                    <Edit className="w-4 h-4 mr-1" />
+                                    {t("admin.edit")}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-blue-400 border-blue-400/30 hover:bg-blue-400/10"
+                                    onClick={() => {
+                                      setMergeTarget(opt);
+                                      setMergeTargetKey("");
+                                    }}
+                                    data-testid={`button-merge-option-${opt.id}`}
+                                  >
+                                    <GitMerge className="w-4 h-4 mr-1" />
+                                    {t("admin.merge")}
+                                  </Button>
+                                </>
                               )}
                               <Button
                                 size="icon"
@@ -1372,6 +2029,58 @@ function CustomOptionsManagement() {
           {t("admin.no_custom_options_global")}
         </div>
       )}
+
+      {/* Merge dialog */}
+      <Dialog open={!!mergeTarget} onOpenChange={(open) => { if (!open) { setMergeTarget(null); setMergeTargetKey(""); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{t("admin.merge_option_title")}</DialogTitle>
+            <DialogDescription>{t("admin.merge_option_description")}</DialogDescription>
+          </DialogHeader>
+          {mergeTarget && (
+            <div className="space-y-4 py-2">
+              <div className="rounded-md border border-white/10 bg-background/50 p-3 text-sm space-y-1">
+                <p className="font-medium">{t("admin.merge_source")}:</p>
+                <p><span className="text-muted-foreground">{t("admin.label_ja")}:</span> {mergeTarget.labelJa}</p>
+                <p><span className="text-muted-foreground">{t("admin.label_en")}:</span> {mergeTarget.labelEn}</p>
+                <p><span className="text-muted-foreground">{t("admin.key")}:</span> <code className="font-mono text-xs">{mergeTarget.originalValue}</code></p>
+              </div>
+              <div className="space-y-2">
+                <Label>{t("admin.merge_into")}</Label>
+                <Select value={mergeTargetKey} onValueChange={setMergeTargetKey}>
+                  <SelectTrigger className="bg-background border-white/10">
+                    <SelectValue placeholder={t("admin.merge_select_target")} />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {getMergeOptions(mergeTarget.category, mergeTarget.id).map((opt) => (
+                      <SelectItem key={opt.key} value={opt.key}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("admin.merge_warning")}</p>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setMergeTarget(null); setMergeTargetKey(""); }}>
+              {t("admin.cancel")}
+            </Button>
+            <Button
+              disabled={!mergeTargetKey || isMerging}
+              onClick={handleMerge}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isMerging ? (
+                <><Skeleton className="w-4 h-4 mr-2 rounded-full" />{t("admin.merging")}</>
+              ) : (
+                <><GitMerge className="w-4 h-4 mr-2" />{t("admin.merge_confirm")}</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
